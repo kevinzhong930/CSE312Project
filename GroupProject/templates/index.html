@@ -1,12 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Document</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>UB Programmer's Team Project</title>
+    <script>
+        function toggleForm(formType) {
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+
+            if (formType === 'register') {
+                document.getElementById('registrationForm').style.display = 'block';
+            } else if (formType === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+            }
+        }
+    </script>
 </head>
+
 <body>
-   
+    <div class="container">
+        <h1>Welcome to UB's Programmer Project</h1>
+        <div class="btn-group">
+            <button onclick="toggleForm('register')">Register</button>
+            <button onclick="toggleForm('login')">Login</button>
+        </div>
+
+        <form id="registrationForm" class="auth-form" action="/register" method="POST" style="display: none;">
+            <h2>Register</h2>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Register</button>
+        </form>
+
+        <form id="loginForm" class="auth-form" action="/login" method="POST" style="display: none;">
+            <h2>Login</h2>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </body>
 </html>
