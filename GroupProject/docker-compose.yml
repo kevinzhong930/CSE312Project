@@ -1,6 +1,16 @@
 version: '3'
 services:
-  app:
-    build: .
+  mongo:
+    image: mongo:4.2.5
+    container_name: mongodb
     ports:
-      - '8080:8080'
+      - '27017:27017'
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      WAIT_HOSTS: mongo:27017
+    ports:
+      - "8080:8080"
+    
