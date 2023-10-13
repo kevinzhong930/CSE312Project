@@ -1,8 +1,43 @@
-
-from urllib import request
-from flask import Flask, render_template, make_response, request
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
+from flask_pymongo import PyMongo
+import bcrypt
 
 app = Flask(__name__)
+
+app.config["MONGO_URI"] = "mongodb://localhost:27017/mydatabase"
+app.secret_key = "secret_Key"
+
+mongo = PyMongo(app)
+
+@app.route('/', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        users = mongo.db.users
+
+        # HTML injection, escape all HTML characters in the username.
+        user_name = escape(request.form['user_Name'])
+        password = request.form['password']
+
+        # Check if a user name is already exists
+        existing_user = users.find_one({'name': user_name})
+
+        # Check username and password are filled
+        if not user_name or not password:
+            flash('Username or password cannot be empty')
+            return redirect(url_for('register'))
+        
+        # Notify if the username is already taken
+        if existing_user:
+            flash('Already exists')
+            return redirect(url_for('register'))
+        
+        hash_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
+        
+        users.insert({'name': user_name, 'password': hash_pass})
+        flash('Registration success')
+        return redirect(url_for('register'))
+
+    return render_template('register.html')
 
 
 @app.route('/') 
@@ -40,7 +75,7 @@ def favicon():
     return response
 
 @app.route('/visit-counter')
-def cookieConunter():
+def cookieCounter():
     if "Cookie" not in request.headers:
         response = make_response("Cookie Number is: 1")
         response.mimetype = "text/plain"
