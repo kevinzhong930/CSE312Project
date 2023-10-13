@@ -1,44 +1,44 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
-from flask_pymongo import PyMongo
+from pymongo import MongoClient
 import bcrypt
 
 app = Flask(__name__)
 
-app.config["MONGO_URI"] = "mongodb://localhost:27017/mydatabase"
+client = MongoClient("mongodb://mongo:27017/")
+db = client["database"]
 app.secret_key = "secret_Key"
 
-mongo = PyMongo(app)
+user_db = db["user_db"]
+auth_tokens = db["auth_tokens"]        
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        users = mongo.db.users
-
         # HTML injection, escape all HTML characters in the username.
-        user_name = escape(request.form['user_Name'])
+        user_name = escape(request.form['username'])
         password = request.form['password']
 
         # Check if a user name is already exists
-        existing_user = users.find_one({'name': user_name})
+        existing_user = user_db.find_one({'name': user_name})
 
         # Check username and password are filled
         if not user_name or not password:
             flash('Username or password cannot be empty')
             return redirect(url_for('register'))
-        
+
         # Notify if the username is already taken
         if existing_user:
-            flash('Already exists')
+            flash('Username already exists')
             return redirect(url_for('register'))
-        
-        hash_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
-        
-        users.insert({'name': user_name, 'password': hash_pass})
+
+        salt = bcrypt.gensalt()
+        hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+        user_db.insert_one({'name': user_name, 'password': hash_pass, 'salt': salt})
         flash('Registration success')
         return redirect(url_for('register'))
 
-    return render_template('register.html')
-
+    return render_template('index.html')
 
 @app.route('/') 
 def index():
@@ -99,4 +99,3 @@ def cookieCounter():
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
-
