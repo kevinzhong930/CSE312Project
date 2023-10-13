@@ -1,9 +1,20 @@
 
 from urllib import request
 from flask import Flask, render_template, make_response, request
+from pymongo import MongoClient
+import bcrypt
+import secrets
 
 app = Flask(__name__)
 
+client = MongoClient("mongodb://mongo:27017/")
+db = client["database"]         
+
+# Stores usernames and passwords {'username': username_val, 'password': password_val} 
+user_db = db["user_db"]                             
+
+# Stores authentication tokens {'token': token_val, 'username': username_val}
+auth_tokens = db["auth_tokens"]                     
 
 @app.route('/') 
 def index():
@@ -59,8 +70,32 @@ def cookieConunter():
         response.set_cookie(key= "visits", value=visitsNum, max_age = 3600)
         return response
 
-
-
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    try:
+        client = MongoClient('mongo',27017)
+        db = client.database
+        user_db = db.user_db
+        
+        username = request.form['username']
+        password = request.form['password']
+        user_data = user_db.find_one({"username": username})
+        client.close()
+        if user_data:
+            hashed_PW = bcrypt.hashpw(password.encode('utf-8'), user_data['salt'])
+            if hashed_PW == user_data['password']:
+                token = secrets.token_hex(32)
+                auth_tokens.insert_one({'token': token, 'username': username})
+                response = make_response("Login successful")
+                response.set_cookie("auth_token", token, max_age=3600, httponly=True)
+                return response
+            else:
+                raise Exception("Invalid password")
+        else:
+            raise Exception("Username does not exist")
+        
+    except Exception as e:
+        return str(e), 400
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
