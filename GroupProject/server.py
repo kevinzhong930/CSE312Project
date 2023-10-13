@@ -1,16 +1,13 @@
-
-from urllib import request
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
-from flask_pymongo import PyMongo
-import bcrypt
-from pymongo import MongoClient
 import bcrypt
 import secrets
+from pymongo import MongoClient
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
 
 app = Flask(__name__)
 
 client = MongoClient("mongodb://mongo:27017/")
 db = client["database"]         
+app.secret_key = "secret_Key"
 
 # Stores usernames and passwords {'username': username_val, 'password': password_val} 
 user_db = db["user_db"]                             
@@ -20,9 +17,7 @@ auth_tokens = db["auth_tokens"]
 
 @app.route('/') 
 def index():
-    response = make_response(render_template('index.html'))
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    return response
+    return render_template('index.html')
 
 @app.route('/static/functions.js')
 def functions():
@@ -72,47 +67,13 @@ def cookieCounter():
         response.set_cookie(key= "visits", value=visitsNum, max_age = 3600)
         return response
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        users = mongo.db.users
-
-        # HTML injection, escape all HTML characters in the username.
-        user_name = escape(request.form['user_Name'])
-        password = request.form['password']
-
-        # Check if a user name is already exists
-        existing_user = users.find_one({'name': user_name})
-
-        # Check username and password are filled
-        if not user_name or not password:
-            flash('Username or password cannot be empty')
-            return redirect(url_for('register'))
-        
-        # Notify if the username is already taken
-        if existing_user:
-            flash('Already exists')
-            return redirect(url_for('register'))
-        
-        hash_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
-        
-        users.insert({'name': user_name, 'password': hash_pass})
-        flash('Registration success')
-        return redirect(url_for('register'))
-
-    return render_template('register.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
-        client = MongoClient('mongo',27017)
-        db = client.database
-        user_db = db.user_db
-        
         username = request.form['username']
         password = request.form['password']
-        user_data = user_db.find_one({"username": username})
-        client.close()
+        user_data = user_db.find_one({"name": username})
+
         if user_data:
             hashed_PW = bcrypt.hashpw(password.encode('utf-8'), user_data['salt'])
             if hashed_PW == user_data['password']:
@@ -122,13 +83,12 @@ def login():
                 response.set_cookie("auth_token", token, max_age=3600, httponly=True)
                 return response
             else:
-                raise Exception("Invalid password")
+                raise Exception()
         else:
-            raise Exception("Username does not exist")
-        
-    except Exception as e:
-        return str(e), 400
+            raise Exception()
+
+    except Exception:
+        return "Error during login. Please check your credentials.", 400
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
-
