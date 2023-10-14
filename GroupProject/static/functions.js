@@ -28,12 +28,26 @@ function postHTML(postJSON) {
 
 //Adding a like
 function likePost(postId) {
-    return 
+    const request = new XMLHttpRequest();
+    request.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            console.log(this.response);
+        }
+    }
+    request.open("POST", "/post-description/" + postId);
+    request.send();
 }
 
 //Adding a dislike
 function dislikePost(postId) {
-    return
+    const request = new XMLHttpRequest();
+    request.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            console.log(this.response);
+        }
+    }
+    request.open("POST", "/post-description/" + postId);
+    request.send();
 }
 
 function addMessageToPosts(messageJSON) {
@@ -59,5 +73,5 @@ function updatePosts() {
 
 function welcome() {
     updatePosts();
-    setInterval(updatePosts,2000)
+    setInterval(updatePosts,2000);
 }
