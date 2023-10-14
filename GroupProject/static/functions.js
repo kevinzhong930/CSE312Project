@@ -18,7 +18,7 @@ function postHTML(postJSON) {
     postHTML += "<strong>Description:</strong> " + description;
 
     //Display the Like/Dislike Buttons
-    postHTML += "<button onclick='likePost(\"" + postId + "\")'>LIKE</button> <button onclick='dislikePost(\"" + postId + "\")'>DISLIKE</button>"
+    postHTML += "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>"
 
     postHTML += "</span>";
 
@@ -38,23 +38,13 @@ function likePost(postId) {
     request.send();
 }
 
-//Adding a dislike
-function dislikePost(postId) {
-    const request = new XMLHttpRequest();
-    request.onreadystatechange = function () {
-        if (this.readyState === 4 && this.status === 200) {
-            console.log(this.response);
-        }
-    }
-    request.open("POST", "/post-description/" + postId);
-    request.send();
-}
-
+//Adding the postHTML on indexHTML
 function addMessageToPosts(messageJSON) {
     const posts = document.getElementById("postHistory");
     posts.innerHTML += postHTML(messageJSON);
 }
 
+//Updates all Posts
 function updatePosts() {
     const request = new XMLHttpRequest();
     request.onreadystatechange = function () {
