@@ -2,7 +2,7 @@
 import bcrypt
 import secrets
 from pymongo import MongoClient
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape, jsonify
 
 app = Flask(__name__)
 
@@ -30,19 +30,19 @@ def register():
         # Check username and password are filled
         if not user_name or not password:
             flash('Username or password cannot be empty')
-            return redirect(url_for('register'))
+            return redirect(url_for('index'))
 
         # Notify if the username is already taken
         if existing_user:
             flash('Username already exists')
-            return redirect(url_for('register'))
+            return redirect(url_for('index'))
 
         salt = bcrypt.gensalt()
         hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
 
         user_db.insert_one({'name': user_name, 'password': hash_pass, 'salt': salt})
         flash('Registration success')
-        return redirect(url_for('register'))
+        return redirect(url_for('index'))
 
     return render_template('index.html')
 
@@ -50,6 +50,17 @@ def register():
 @app.route('/') 
 def index():
     return render_template('index.html')
+
+@app.route('/get-username')
+# Displays username
+def getUsername():
+    token = request.cookies.get('auth_token')
+    t = auth_tokens.find_one({'token': token})
+    if t:
+        current_username = t['username']
+    else: 
+        current_username = None
+    return jsonify({'username': current_username})
 
 @app.route('/static/functions.js')
 def functions():
@@ -111,16 +122,18 @@ def login():
             if hashed_PW == user_data['password']:
                 token = secrets.token_hex(32)
                 auth_tokens.insert_one({'token': token, 'username': username})
-                response = make_response("Login successful")
+                response = make_response(render_template('login.html'))
                 response.set_cookie("auth_token", token, max_age=3600, httponly=True)
                 return response
             else:
+                response = "Invalid password."
                 raise Exception()
         else:
+            response = "Username does not exist."
             raise Exception()
 
     except Exception:
-        return "Error during login. Please check your credentials.", 400
+        return response, 400
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
