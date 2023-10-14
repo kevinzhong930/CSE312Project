@@ -1,67 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>UB Programmers Team Project</title>
-    <script>
-        function toggleForm(formType) {
-            document.getElementById('registrationForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'none';
-
-            if (formType === 'register') {
-                document.getElementById('registrationForm').style.display = 'block';
-            } else if (formType === 'login') {
-                document.getElementById('loginForm').style.display = 'block';
-            }
-        }
-    </script>
+    <title>Chirper</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
-<body>
-    <div class="container">
-        <h1>Welcome to UB Programmers Project</h1>
-        <div id="username">
+<body onload="welcome();">
 
-        </div>
-        <div class="btn-group">
-            <button onclick="toggleForm('register')">Register</button>
-            <button onclick="toggleForm('login')">Login</button>
+    <h1>Chirper</h1>
+    <!--<img src="{{ url_for('static', filename='scenaryImage.jpg') }}" alt="Please Enjoy" class="homepage_image"/>-->
+
+    <br />
+    <hr />
+
+    <div class="contents">
+        <!-- Post Section -->
+        <div class="post">
+            <h2>All Posts</h2>
+            <div id="post-list">
+                <!-- Individual posts will appear here, added dynamically with JavaScript -->
+            </div>
+
+            <hr>
+            <h2>Create a New Post</h2>
+            <div class="post-form">
+                <label>
+                    Title:
+                    <input id="post-title-box" type="text">
+                </label>
+                <br>
+                <label>
+                    Description:
+                    <textarea id="post-description-box"></textarea>
+                </label>
+                <br>
+                <button id="post-button" onclick="sendPost()">Post</button>
+                <input value="{{ xsrfToken }}" id="xsrf-token" hidden>
+            </div>
         </div>
 
-        <form id="registrationForm" class="auth-form" action="/register" method="POST" style="display: none;">
+        <!-- User Registration and Login Section -->
+        <div class="user-list">
             <h2>Register</h2>
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
+            <form action="/register" method="post" enctype="application/x-www-form-urlencoded">
+                <label>Username:
+                    <input id="reg-form-username" type="text" name="username_reg" />
+                </label>
+                <br />
+                <label>Password:&nbsp;
+                    <input id="reg-form-pass" type="password" name="password_reg">
+                </label>
+                <input type="submit" value="Register">
+            </form>
 
-        <form id="loginForm" class="auth-form" action="/login" method="POST" style="display: none;">
+            <hr>
+
             <h2>Login</h2>
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
+            <form action="/login" method="post" enctype="application/x-www-form-urlencoded">
+                <label>Username:
+                    <input id="login-form-username" type="text" name="username_login" />
+                </label>
+                <br />
+                <label>Password:&nbsp;
+                    <input id="login-form-pass" type="password" name="password_login">
+                </label>
+                <input type="submit" value="Login">
+            </form>
+        </div>
     </div>
 
-    <script>
-        function getUsername() {
-            fetch('/get-username')  
-                .then(response => response.json())
-                .then(data => {
-                    if (data.username) {
-                        document.getElementById('username').innerHTML = `Logged in as: ${data.username}`;
-                    } else {
-                        document.getElementById('username').innerHTML = 'Not logged in';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }    
-        getUsername();
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='functions.js') }}"></script>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="closeBtn" onclick="closeModal()">&times;</span>
+            <p id="errorMsg"></p>
+        </div>
+    </div>
+
 </body>
+
 </html>
