@@ -1,3 +1,4 @@
+
 import bcrypt
 import secrets
 from pymongo import MongoClient
@@ -6,6 +7,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, mak
 app = Flask(__name__)
 
 client = MongoClient("mongodb://mongo:27017/")
+
 db = client["database"]         
 app.secret_key = "secret_Key"
 
@@ -13,7 +15,37 @@ app.secret_key = "secret_Key"
 user_db = db["user_db"]                             
 
 # Stores authentication tokens {'token': token_val, 'username': username_val}
-auth_tokens = db["auth_tokens"]    
+auth_tokens = db["auth_tokens"]     
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # HTML injection, escape all HTML characters in the username.
+        user_name = escape(request.form['username'])
+        password = request.form['password']
+
+        # Check if a user name is already exists
+        existing_user = user_db.find_one({'name': user_name})
+
+        # Check username and password are filled
+        if not user_name or not password:
+            flash('Username or password cannot be empty')
+            return redirect(url_for('register'))
+
+        # Notify if the username is already taken
+        if existing_user:
+            flash('Username already exists')
+            return redirect(url_for('register'))
+
+        salt = bcrypt.gensalt()
+        hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+        user_db.insert_one({'name': user_name, 'password': hash_pass, 'salt': salt})
+        flash('Registration success')
+        return redirect(url_for('register'))
+
+    return render_template('index.html')
+
 
 @app.route('/') 
 def index():
