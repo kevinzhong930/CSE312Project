@@ -4,6 +4,7 @@ function postHTML(postJSON) {
     const title = postJSON.title;
     const description = postJSON.description;
     const postId = postJSON.id;
+    const likeCounter = postJSON.likeCounter;
 
     
     let postHTML = "<br><span id='post_" + postId + "'>";
@@ -18,7 +19,7 @@ function postHTML(postJSON) {
     postHTML += "<strong>Description:</strong> " + description;
 
     //Display the Like/Dislike Buttons
-    postHTML += "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>"
+    postHTML += "<br>" + likeCounter +  "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" 
 
     postHTML += "</span>";
 
@@ -34,12 +35,12 @@ function likePost(postId) {
             console.log(this.response);
         }
     }
-    request.open("POST", "/post-description/" + postId);
+    request.open("POST", "/post-request" + postId);
     request.send();
 }
 
 //Adding the postHTML on indexHTML
-function addMessageToPosts(messageJSON) {
+function addPostToPosts(messageJSON) {
     const posts = document.getElementById("postHistory");
     posts.innerHTML += postHTML(messageJSON);
 }
@@ -52,7 +53,7 @@ function updatePosts() {
             clearChat();
             const posts = JSON.parse(this.response);
             for (const post of posts) {
-                addMessageToPosts(post);
+                addPostToPosts(post);
             }
         }
     }
