@@ -4,7 +4,8 @@ function postHTML(postJSON) {
     const title = postJSON.title;
     const description = postJSON.description;
     const postId = postJSON.id;
-    const likeCounter = postJSON.likeCounter;
+    
+    //const likeCounter = postJSON.likeCounter;
 
     
     let postHTML = "<br><span id='post_" + postId + "'>";
@@ -18,8 +19,8 @@ function postHTML(postJSON) {
     //Display the description.
     postHTML += "<strong>Description:</strong> " + description;
 
-    //Display the Like/Dislike Buttons
-    postHTML += "<br>" + likeCounter +  "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" 
+    //Display the Like/Dislike Buttons and the Counter for Likes
+    postHTML += /* "<br>" + likeCounter + */ "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" 
 
     postHTML += "</span>";
 
@@ -35,7 +36,7 @@ function likePost(postId) {
             console.log(this.response);
         }
     }
-    request.open("POST", "/post-request" + postId);
+    request.open("POST", "/post-likes" + postId);
     request.send();
 }
 
@@ -50,7 +51,7 @@ function updatePosts() {
     const request = new XMLHttpRequest();
     request.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
-            clearChat();
+            clearPosts();
             const posts = JSON.parse(this.response);
             for (const post of posts) {
                 addPostToPosts(post);
@@ -62,6 +63,13 @@ function updatePosts() {
     request.send();
 }
 
+//Clearing Posts
+function clearPosts() {
+    const posts = document.getElementById("postHistory");
+    posts.innerHTML = "";
+}
+
+//Constantly Calls updatePosts() on startup
 function welcome() {
     updatePosts();
     setInterval(updatePosts,2000);

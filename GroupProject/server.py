@@ -17,6 +17,9 @@ user_db = db["user_db"]
 # Stores authentication tokens {'token': token_val, 'username': username_val}
 auth_tokens = db["auth_tokens"]     
 
+# Stores Post History
+post_collection = db["post_collection"]
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -134,6 +137,18 @@ def login():
 
     except Exception:
         return response, 400
+    
+@app.route('/post-history')
+def post_history():
+    posts = post_collection.find({})
+    for post in posts:
+        post['_id'] = str(post['_id'])
+    return jsonify(posts)
+
+@app.route('/post-like-request')
+def likeFunction():
+
+    return
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
