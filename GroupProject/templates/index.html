@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>UB Programmer's Team Project</title>
+    <title>UB Programmers Team Project</title>
     <script>
         function toggleForm(formType) {
             document.getElementById('registrationForm').style.display = 'none';
@@ -22,7 +22,10 @@
 
 <body>
     <div class="container">
-        <h1>Welcome to UB's Programmer Project</h1>
+        <h1>Welcome to UB Programmers Project</h1>
+        <div id="username">
+
+        </div>
         <div class="btn-group">
             <button onclick="toggleForm('register')">Register</button>
             <button onclick="toggleForm('login')">Login</button>
@@ -42,5 +45,23 @@
             <button type="submit">Login</button>
         </form>
     </div>
+
+    <script>
+        function getUsername() {
+            fetch('/get-username')  
+                .then(response => response.json())
+                .then(data => {
+                    if (data.username) {
+                        document.getElementById('username').innerHTML = `Logged in as: ${data.username}`;
+                    } else {
+                        document.getElementById('username').innerHTML = 'Not logged in';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }    
+        getUsername();
+    </script>
 </body>
 </html>

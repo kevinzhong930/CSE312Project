@@ -1,7 +1,7 @@
 import bcrypt
 import secrets
 from pymongo import MongoClient
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape, jsonify
 
 app = Flask(__name__)
 
@@ -18,6 +18,17 @@ auth_tokens = db["auth_tokens"]
 @app.route('/') 
 def index():
     return render_template('index.html')
+
+@app.route('/get-username')
+# Displays username
+def getUsername():
+    token = request.cookies.get('auth_token')
+    t = auth_tokens.find_one({'token': token})
+    if t:
+        current_username = t['username']
+    else: 
+        current_username = None
+    return jsonify({'username': current_username})
 
 @app.route('/static/functions.js')
 def functions():
