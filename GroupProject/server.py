@@ -17,7 +17,7 @@ user_db = db["user_db"]
 # Stores authentication tokens {'token': token_val, 'username': username_val}
 auth_tokens = db["auth_tokens"]     
 
-# Stores Post History
+# Stores Post History {postId,username,title,description,likes}
 post_collection = db["post_collection"]
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -145,9 +145,10 @@ def post_history():
         post['_id'] = str(post['_id'])
     return jsonify(posts)
 
-@app.route('/post-like-request')
-def likeFunction():
-
+@app.route('/post-likes')
+def likeFunction(postId):
+    post = post_collection.find({"postId" : postId})
+    
     return
 
 if __name__ == "__main__":
