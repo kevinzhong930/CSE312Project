@@ -58,6 +58,14 @@
 
 
     <div class="Posts">
+
+        <form id="postSubmission" class="post-form" action="/post-submission" method="POST" style="display: none;">
+            <h2>Login</h2>
+            <input type="text" name="title" placeholder="Title" required>
+            <input type="text" name="description" placeholder="Description" required>
+            <button type="submit">Post</button>
+        </form>
+
         <h1>Posts</h1>
 
         <div id = "postHistory">
