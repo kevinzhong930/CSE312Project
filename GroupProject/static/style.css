@@ -3,3 +3,7 @@ body {
     background-color: #ffffff;
     color: #000000;
 }
+
+#descriptionBox {
+    height: 100px;
+}
