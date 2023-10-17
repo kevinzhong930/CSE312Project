@@ -148,6 +148,28 @@ def post_history():
 @app.route('/post-likes')
 def likeFunction(postId):
     post = post_collection.find({"postId" : postId})
+    return
+
+@app.route('/post-submission')
+def submitPost():
+    username = ""
+
+    if request.cookies['auth_token']:
+        auth_token = request.cookies['auth_token']
+        for userInfo in user_db.find({}):
+            if bcrypt.checkpw(auth_token.encode(),userInfo['auth_token']):
+                username = userInfo['username']
+                break
+        
+    else:
+        response = "Not Logged In"
+        make_response(response)
+        return response
+
+    title = request.form['title']
+    description = request.form['description']
+    post_collection.insert_one({"username" : username,"title" : title, "description" : description, "likes" : 0})
+    #Clear the Submission Sheet after and send a message saying Post was sent!
     
     return
 
