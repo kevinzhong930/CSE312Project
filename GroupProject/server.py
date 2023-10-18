@@ -41,10 +41,11 @@ def register():
         hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
 
         user_db.insert_one({'name': user_name, 'password': hash_pass, 'salt': salt})
-        flash('Registration success')
-        return redirect(url_for('index'))
+        
+        response = make_response(render_template('register.html'))
+        return response
 
-    return render_template('index.html')
+    return render_template('index.html')    
 
 
 @app.route('/') 
