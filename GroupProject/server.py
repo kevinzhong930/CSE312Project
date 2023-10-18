@@ -146,7 +146,7 @@ def create_app():
         description = data['description']
 
         #Save to MongoDB
-        post_id = post_collection.insert_one({'username': username, 'title': title, 'description': description}).inserted_id
+        post_id = mongo.db.posts.insert_one({'username': username, 'title': title, 'description': description}).inserted_id
 
         data['id'] = str(post_id)
         
