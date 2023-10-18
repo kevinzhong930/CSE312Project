@@ -1,6 +1,7 @@
+Flask>=1.0
 Flask-PyMongo
 PyMongo
 bcrypt
-flask
 Flask-SocketIO
 eventlet
+PyMongo

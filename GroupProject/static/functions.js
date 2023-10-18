@@ -17,12 +17,7 @@ function postHTML(postJSON) {
     //>X</button> This is an HTML button. \
     //The text inside the button is "X", suggesting that it's a "delete" button.
 
-    //onclick='deletePost(\"" + postId + "\")': This is an event handler. 
-    //When the button is clicked, it will trigger the deletePost JavaScript function.
-    //The deletePost function expects an argument, which is the postId. 
-    let postHTML = "<br><button onclick='deletePost(\"" + postId + "\")'>X</button> ";
-    
-    postHTML += "<span id='post_" + postId + "'>";
+    let postHTML = "<br><span id='post_" + postId + "'>";
 
     //Display the username in bold.
     postHTML += "<b>" + username + "</b>: ";
@@ -39,24 +34,24 @@ function postHTML(postJSON) {
 }
 
 function clearPost() {
-    const posts = document.getElementById("post-list");
+    const posts = document.getElementById("postHistory");
     posts.innerHTML = "";
 }
 
 function addPost(postJSON) {
     //This element presumably contains all the posts on the webpage.
-    const posts = document.getElementById("post-list");
-    //Append the new post to the existing content inside the "post-list" element
+    const posts = document.getElementById("postHistory");
+    //Append the new post to the existing content inside the "postHistory" element
     //postHTML converts postJSON object into a formatted HTML string.
     posts.innerHTML += postHTML(postJSON);
-    posts.scrollIntoView(false);
-    //Scroll to the bottom of the "post-list" element to show the latest post
-    posts.scrollTop = posts.scrollHeight - posts.clientHeight;
+    //Scroll to the top
+    posts.scrollIntoView(true);
+    posts.scrollTop = 0;
 }
 
 //Send a post from the client side to the server.
 function sendPost() {
-    // Retrieve the title and description input values
+    //Retrieve the title and description input values
     const postTitleBox = document.getElementById("post-title-box");
     const postDescriptionBox = document.getElementById("post-description-box");
     const title = postTitleBox.value;
@@ -89,6 +84,18 @@ function updatePost() {
     request.send();
 }
 
+//Adding a like
+function likePost(postId) {
+    const request = new XMLHttpRequest();
+    request.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            console.log(this.response);
+        }
+    }
+    request.open("POST", "/post-likes" + postId);
+    request.send();
+}
+
 function welcome() {
     document.addEventListener("keypress", function (event) {
         if (event.code === "Enter") {
@@ -97,6 +104,6 @@ function welcome() {
     });
 
     document.getElementById("post-title-box").focus();
-
-    updatePost();
+    setInterval(updatePost, 2000)
+    //updatePost()
 }
