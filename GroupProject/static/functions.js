@@ -3,12 +3,10 @@ function postHTML(postJSON) {
     const username = postJSON.username;
     const title = postJSON.title;
     const description = postJSON.description;
-    const postId = postJSON.id;
-    
-    //const likeCounter = postJSON.likeCounter;
+    const postId = postJSON._id;
 
     
-    let postHTML = "<br><span id='post_" + postId + "'>";
+    let postHTML = "<div class='post-box' id='post_" + postId + "'>";
 
     //Display the username in bold.
     postHTML += "<b>" + username + "</b>: ";
@@ -19,10 +17,12 @@ function postHTML(postJSON) {
     //Display the description.
     postHTML += "<strong>Description:</strong> " + description;
 
+    postHTML += "<br><br>"
+
     //Display the Like/Dislike Buttons and the Counter for Likes
     postHTML += /* "<br>" + likeCounter + */ "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" 
 
-    postHTML += "</span>";
+    postHTML += "</div>";
 
     return postHTML;
 
@@ -36,7 +36,7 @@ function likePost(postId) {
             console.log(this.response);
         }
     }
-    request.open("POST", "/post-likes" + postId);
+    request.open("POST", "/post-likes/" + postId);
     request.send();
 }
 
