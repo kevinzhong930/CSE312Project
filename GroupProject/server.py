@@ -60,7 +60,10 @@ def index():
 # Displays username
 def getUsername():
     token = request.cookies.get('auth_token')
-    t = auth_tokens.find_one({'token': token})
+    t = None
+    for userInfo in auth_tokens.find({}):
+        if bcrypt.checkpw(token.encode('utf-8'),userInfo['token']):
+            t = userInfo
     if t:
         current_username = t['username']
     else: 
@@ -159,7 +162,8 @@ def post_history():
 
 @app.route('/post-likes/<postId>', methods=['POST'])
 def likeFunction(postId):
-    post = post_collection.find_one({"postId" : postId})
+    print(postId)
+    post = post_collection.find_one({"_id" : postId})
     auth_token = request.cookies.get('auth_token')
     username = ''
     if auth_token:
@@ -167,25 +171,16 @@ def likeFunction(postId):
             if bcrypt.checkpw(auth_token.encode('utf-8'),token['token']):
                 username = token['username']
         
-        if username in post['likes']:
-            filter = {'postId' : postId}
-            newValues = {"$set" : {'likes' : [username]}}
-            post_collection.update_one(filter,newValues)
-            flash('Liked!')
-
-        elif username in post['likes']:
-            filter = {'postId' : postId}
-            newValues = {"$set" : {'likes' : post['likes'].remove(username)}}
-            post_collection.update_one(filter,newValues)
-            flash('Unliked!')
-
+        likeHolder = False
+        for key in post:
+            if key == username:
+                likeHolder = True
+            
+        if likeHolder == True:
+            post_collection.update_one(post,{'$unset' : {username : ""}})
         else:
-            filter = {'postId' : postId}
-            newValues = {"$set" : {'likes' : post['likes'].append(username)}}
-            post_collection.update_one(filter,newValues)
-            flash('Liked!')
+            post_collection.update_one(post,{'$set' : {username : ""}})
 
-        
         return redirect(url_for('index'))
 
 
@@ -193,6 +188,12 @@ def likeFunction(postId):
         response = "Not Logged In"
         make_response(response)
         return response
+
+@app.route('/get-likes/<postId>', methods=['GET'])
+def getLikes(postId):
+    post = post_collection.find_one({'_id' : postId})
+    numOfLikes = len(post) - 4
+    return jsonify(numOfLikes);
 
 @app.route('/post-submission', methods=['POST'])
 def submitPost():
@@ -213,7 +214,7 @@ def submitPost():
     title = request.form.get('title', "")
     description = request.form.get('description', "")
     id = "postID" + secrets.token_hex(32)
-    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description, "likes" : []})
+    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description})
     #Clear the Submission Sheet after and send a message saying Post was sent!
     flash('Post submitted successfully!')
     return redirect(url_for('index'))
