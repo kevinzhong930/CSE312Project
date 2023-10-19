@@ -18,19 +18,22 @@
             }
         }
     </script>
+    <script>src = "static/functions.js"</script>
 </head>
 
-<body>
-    <div class="container">
-        <h1>Welcome to UB Programmers Project</h1>
-        <div id="username">
+<body onload = "welcome();">
 
-        </div>
-        <div class="btn-group">
-            <button onclick="toggleForm('register')">Register</button>
-            <button onclick="toggleForm('login')">Login</button>
-        </div>
+<div class="container">
+    <h1>Welcome to UB Programmers Project</h1>
+    <div id="username">
 
+    </div>
+    <div class="btn-group">
+        <button onclick="toggleForm('register')">Register</button>
+        <button onclick="toggleForm('login')">Login</button>
+    </div>
+
+    <div style="position: absolute; top: 0; right: 0; padding: 10px;">
         <form id="registrationForm" class="auth-form" action="/register" method="POST" style="display: none;">
             <h2>Register</h2>
             <input type="text" name="username" placeholder="Username" required>
@@ -44,6 +47,24 @@
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
         </form>
+    </div>
+</div>
+
+    <div class="Posts">
+        
+        <form id="postSubmission" class="post-form" action="/post-submission" method="POST">
+            <h2>Submit a Post!</h2>
+            <input type="text" name="title" placeholder="Title" required>
+            <br> <br>
+            <textarea id = "description" placeholder = "Description" cols="29" rows="10"></textarea>
+            <br>
+            <button type="submit">Post</button>
+        </form>
+
+        <h1>Posts</h1>
+
+        <div id = "postHistory">
+        </div>  
     </div>
 
     <script>
