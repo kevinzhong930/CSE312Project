@@ -29,13 +29,11 @@ def register():
 
         # Check username and password are filled
         if not user_name or not password:
-            flash('Username or password cannot be empty')
-            return redirect(url_for('index'))
+            return "Username or password cannot be empty", 400
 
         # Notify if the username is already taken
         if existing_user:
-            flash('Username already exists')
-            return redirect(url_for('index'))
+            return "Username already exists.", 400
 
         salt = bcrypt.gensalt()
         hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)

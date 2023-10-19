@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="static/style.css">
     <title>UB Programmers Team Project</title>
     <script>
         function toggleForm(formType) {
@@ -33,7 +33,8 @@
         <button onclick="toggleForm('login')">Login</button>
     </div>
 
-    <div style="position: absolute; top: 0; right: 0; padding: 10px;">
+    <div style="position: absolute; top: 0; right: 0; padding: 10px; z-index: 100;">
+        <div id="postSubmissionContainer" style="margin-bottom: 20px;"> 
         <form id="registrationForm" class="auth-form" action="/register" method="POST" style="display: none;">
             <h2>Register</h2>
             <input type="text" name="username" placeholder="Username" required>
@@ -52,7 +53,7 @@
 
     <div class="Posts">
         
-        <div id="postSubmissionContainer" style="position: absolute; top: 40%; right: 0; transform: translateY(-50%); padding: 75px;">
+        <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 110px;">
             <form id="postSubmission" class="post-form" action="/post-submission" method="POST">
                 <h2>Submit a Post!</h2>
                 <input type="text" name="title" placeholder="Title" required>
@@ -74,9 +75,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.username) {
-                        document.getElementById('username').innerHTML = `Logged in as: ${data.username}`;
+                        document.getElementById('username').innerHTML = `<span class="user-status">Logged in as: ${data.username}</span>`;
                     } else {
-                        document.getElementById('username').innerHTML = 'Not logged in';
+                        document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
                     }
                 })
                 .catch(error => {
