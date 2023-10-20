@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>UB Programmers Team Project</title>
     <script>
         function toggleForm(formType) {
@@ -18,6 +18,7 @@
             }
         }
     </script>
+
     <script src="static/functions.js"></script>
 </head>
 
@@ -63,6 +64,23 @@
                 <button type="submit">Post</button>
             </form>
         </div>
+        <h1>Posts</h1>
+
+        <div id = "postHistory">
+        </div>  
+    </div>
+
+    <div class="post-container">
+
+        <form id="postSubmission" class="post-form" action="/post-submission" method="POST">
+            <h2>Submit a Post!</h2>
+            <input type="text" name="title" placeholder="Title" required>
+            <br> <br>
+            <textarea id = "description" name ="description" placeholder = "Description" cols="29" rows="10"></textarea>
+            <br>
+            <button type="submit">Post</button>
+        </form>
+
         <h1>Posts</h1>
 
         <div id = "postHistory">

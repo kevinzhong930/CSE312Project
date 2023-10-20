@@ -11,13 +11,16 @@ client = MongoClient("mongodb://mongo:27017/")
 db = client["database"]         
 app.secret_key = "secret_Key"
 
-# Stores usernames and passwords {'username': username_val, 'password': password_val} 
+# Stores usernames and passwords {'username': username_val, 'password': password_val , 'salt': salt_val} 
 user_db = db["user_db"]                             
 
 # Stores authentication tokens {'token': token_val, 'username': username_val}
 auth_tokens = db["auth_tokens"]     
 
-@app.route('/register', methods=['GET', 'POST'])
+# Stores Post History {postId,username,title,description,likes}
+post_collection = db["post_collection"]
+
+@app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
         # HTML injection, escape all HTML characters in the username.
@@ -38,8 +41,8 @@ def register():
         salt = bcrypt.gensalt()
         hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
 
-        user_db.insert_one({'name': user_name, 'password': hash_pass, 'salt': salt})
-        
+        user_db.insert_one({'name': user_name, 'password': hash_pass})
+  
         response = make_response(render_template('register.html'))
         return response
 
@@ -54,7 +57,10 @@ def index():
 # Displays username
 def getUsername():
     token = request.cookies.get('auth_token')
-    t = auth_tokens.find_one({'token': token})
+    t = None
+    for userInfo in auth_tokens.find({}):
+        if bcrypt.checkpw(token.encode('utf-8'),userInfo['token']):
+            t = userInfo
     if t:
         current_username = t['username']
     else: 
@@ -112,27 +118,113 @@ def cookieCounter():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
+        print("110")
         username = request.form['username']
         password = request.form['password']
         user_data = user_db.find_one({"name": username})
-
+        print("123")
         if user_data:
-            hashed_PW = bcrypt.hashpw(password.encode('utf-8'), user_data['salt'])
-            if hashed_PW == user_data['password']:
-                token = secrets.token_hex(32)
-                auth_tokens.insert_one({'token': token, 'username': username})
+            hashed_PW = bcrypt.checkpw(password.encode('utf-8'), user_data['password'])
+            if hashed_PW:
+
+                token = secrets.token_hex(32).encode('utf-8')
+                hashedToken = bcrypt.hashpw(token, bcrypt.gensalt())
+
+                if auth_tokens.find_one({'username' : username}) == None:
+                    auth_tokens.insert_one({'token': hashedToken, 'username': username})
+                else:
+                    auth_tokens.update_one({'username' : username} , { "$set" : {'token' : hashedToken}})
+
                 response = make_response(render_template('login.html'))
                 response.set_cookie("auth_token", token, max_age=3600, httponly=True)
                 return response
             else:
                 response = "Invalid password."
+                print("136")
                 raise Exception()
         else:
             response = "Username does not exist."
+            print("140")
             raise Exception()
 
     except Exception:
         return response, 400
+    
+@app.route('/post-history')
+def post_history():
+    posts = list(post_collection.find({}))
+    for post in posts:
+        post['_id'] = str(post['_id'])
+    return jsonify(posts)
+
+@app.route('/post-likes/<postId>', methods=['POST'])
+def likeFunction(postId):
+    print(postId)
+    post = post_collection.find_one({"_id" : postId})
+    auth_token = request.cookies.get('auth_token')
+    username = ''
+    if auth_token:
+        for token in auth_tokens.find({}):
+            if bcrypt.checkpw(auth_token.encode('utf-8'),token['token']):
+                username = token['username']
+        
+        likeHolder = False
+        print(post)
+        for key in post:
+            if key == username:
+                likeHolder = True
+            
+        if likeHolder == True:
+            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] - 1}})
+            post = post_collection.find_one({"_id" : postId})
+            post_collection.update_one(post,{'$unset' : {username : ""}})
+        else:
+            post_collection.update_one(post,{'$set' : {username : ""}})
+
+            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] + 1}})
+
+
+        return redirect(url_for('index'))
+
+
+    else:
+        response = "Not Logged In"
+        make_response(response)
+        return response
+
+@app.route('/get-likes/<postId>', methods=['GET'])
+def getLikes(postId):
+    post = post_collection.find_one({'_id' : postId})
+    numOfLikes = len(post) - 4
+    numOfLikes = str(numOfLikes)
+    make_response(numOfLikes)
+    print(numOfLikes)
+    #return numOfLikes
+    return jsonify(numOfLikes)
+
+@app.route('/post-submission', methods=['POST'])
+def submitPost():
+    username = ""
+    document = None
+    auth_token = request.cookies.get('auth_token')
+    for token in auth_tokens.find({}):
+        if bcrypt.checkpw(auth_token.encode('utf-8'),token['token']):
+            document = token       
+    #document = auth_tokens.find_one({'token': auth_token})
+    if document:
+        username = document['username']
+    else:
+        response = "Not Logged In"
+        make_response(response)
+        return response
+    print("168 request", request)
+    title = request.form.get('title', "")
+    description = request.form.get('description', "")
+    id = "postID" + secrets.token_hex(32)
+    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description, 'likeCount' : 0})
+    #Clear the Submission Sheet after and send a message saying Post was sent!
+    flash('Post submitted successfully!')
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)
