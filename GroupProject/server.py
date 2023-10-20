@@ -200,6 +200,7 @@ def getLikes(postId):
     make_response(numOfLikes)
     print(numOfLikes)
     #return numOfLikes
+    ##################
     return jsonify(numOfLikes)
 
 @app.route('/post-submission', methods=['POST'])
