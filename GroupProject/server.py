@@ -172,14 +172,20 @@ def likeFunction(postId):
                 username = token['username']
         
         likeHolder = False
+        print(post)
         for key in post:
             if key == username:
                 likeHolder = True
             
         if likeHolder == True:
+            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] - 1}})
+            post = post_collection.find_one({"_id" : postId})
             post_collection.update_one(post,{'$unset' : {username : ""}})
         else:
             post_collection.update_one(post,{'$set' : {username : ""}})
+
+            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] + 1}})
+
 
         return redirect(url_for('index'))
 
@@ -193,7 +199,11 @@ def likeFunction(postId):
 def getLikes(postId):
     post = post_collection.find_one({'_id' : postId})
     numOfLikes = len(post) - 4
-    return jsonify(numOfLikes);
+    numOfLikes = str(numOfLikes)
+    make_response(numOfLikes)
+    print(numOfLikes)
+    #return numOfLikes
+    return jsonify(numOfLikes)
 
 @app.route('/post-submission', methods=['POST'])
 def submitPost():
@@ -214,7 +224,7 @@ def submitPost():
     title = request.form.get('title', "")
     description = request.form.get('description', "")
     id = "postID" + secrets.token_hex(32)
-    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description})
+    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description, 'likeCount' : 0})
     #Clear the Submission Sheet after and send a message saying Post was sent!
     flash('Post submitted successfully!')
     return redirect(url_for('index'))

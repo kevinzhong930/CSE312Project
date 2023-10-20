@@ -1,11 +1,12 @@
 //Creating the HTML for each Post
-var likeCount;
-
 function postHTML(postJSON) {
     const username = postJSON.username;
     const title = postJSON.title;
     const description = postJSON.description;
     const postId = postJSON._id;
+    //const likeCount = getLikes(postId);
+    const likeCount = postJSON.likeCount;
+
 
 
     let postHTML = "<div class='post-box' id='post_" + postId + "'>";
@@ -22,7 +23,7 @@ function postHTML(postJSON) {
     postHTML += "<br><br>";
 
     //Display the Like/Dislike Buttons and the Counter for Likes
-    postHTML += /*likeCountString + " likes  " +*/ "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" ;
+    postHTML +=  likeCount + " likes  " + "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" ;
 
     postHTML += "</div>";
 
@@ -75,4 +76,32 @@ function clearPosts() {
 function welcome() {
     updatePosts();
     setInterval(updatePosts,2000);
+}
+
+function getLikes(postId) {
+    const request = new XMLHttpRequest();
+    var output = "";
+    request.responseType = "string";
+    request.onload = () => {
+        if (request.readyState == 4 && request.status == 200){
+            //const data = request.response;
+            output = request.response;
+            //return parseInt(data);
+            console.log(output);
+            return output;
+        }
+        else{
+            console.log("Error getting like count");
+        }
+    }
+    request.open("GET", "/get-likes/" + postId);
+    request.send();
+    //console.log(output);
+    return output;
+}
+
+async function getLikes2(postId) {
+    const response = await fetch('/get-likes/' + postId)
+    const data = await response.json()
+    return data;
 }
