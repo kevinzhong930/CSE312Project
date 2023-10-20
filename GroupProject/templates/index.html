@@ -54,12 +54,12 @@
 
     <div class="Posts">
         
-        <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 110px;">
+        <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 70px;">
             <form id="postSubmission" class="post-form" action="/post-submission" method="POST">
                 <h2>Submit a Post!</h2>
                 <input type="text" name="title" placeholder="Title" required>
                 <br> <br>
-                <textarea id="description" placeholder="Description" cols="50" rows="20"></textarea>
+                <textarea id="description" name = "description" placeholder="Description" cols="50" rows="20"></textarea>
                 <br>
                 <button type="submit">Post</button>
             </form>
