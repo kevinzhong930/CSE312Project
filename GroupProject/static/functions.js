@@ -86,7 +86,7 @@ function clearPosts() {
 //Constantly Calls updatePosts() on startup
 function welcome() {
     updatePosts();
-    setInterval(updatePosts,2000);
+    // setInterval(updatePosts,2000);
 }
 
 function getLikes(postId) {
