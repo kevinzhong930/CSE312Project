@@ -7,7 +7,6 @@ function postHTML(postJSON) {
     const image = postJSON.image_path;
     //const likeCount = getLikes(postId);
     // const likeCount = postJSON.likeCount;
-    // const likeCount = postJSON.likeCount;
 
     let postHTML = "<div class='post-box' id='post_" + postId + "'>";
 
@@ -27,15 +26,6 @@ function postHTML(postJSON) {
         postHTML += "<img src='" + image + "' alt='Image' style='max-width: 100%; display: block; margin-bottom: 10px;'>";
     }
     //Display the Like/Dislike Buttons and the Counter for Likes
-    // postHTML +=  likeCount + " likes  " + "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" ;
-
-    // Add an input box for the answer.
-    postHTML += "<input type='text' placeholder='Enter your answer' id='answer_" + postId + "'><br>";
-
-    // Add a submit button for the answer.
-    postHTML += "<button onclick='submitAnswer(\"" + postId + "\")'>Submit Answer</button>";
- 
-    postHTML += "</div>";
     // postHTML +=  likeCount + " likes  " + "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" ;
 
     // Add an input box for the answer.
