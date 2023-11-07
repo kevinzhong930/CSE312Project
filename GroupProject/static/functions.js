@@ -5,7 +5,6 @@ function postHTML(postJSON) {
     const description = postJSON.description;
     const postId = postJSON._id;
     const image = postJSON.image_path;
-    const image = postJSON.image_path;
     //const likeCount = getLikes(postId);
     // const likeCount = postJSON.likeCount;
     // const likeCount = postJSON.likeCount;
