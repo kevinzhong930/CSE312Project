@@ -1,8 +1,13 @@
-
 import bcrypt
 import secrets
 from pymongo import MongoClient
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape, jsonify
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired
+from werkzeug.utils import secure_filename
+from PIL import Image
+import html
+import os
 
 app = Flask(__name__)
 
@@ -203,29 +208,69 @@ def getLikes(postId):
     ##################
     return jsonify(numOfLikes)
 
+class PostForm(FlaskForm):
+    image = FileField('Image', validators=[FileRequired()])
+
 @app.route('/post-submission', methods=['POST'])
 def submitPost():
     username = ""
     document = None
     auth_token = request.cookies.get('auth_token')
     for token in auth_tokens.find({}):
-        if bcrypt.checkpw(auth_token.encode('utf-8'),token['token']):
+        if bcrypt.checkpw(auth_token.encode('utf-8'), token['token']):
             document = token       
-    #document = auth_tokens.find_one({'token': auth_token})
     if document:
         username = document['username']
     else:
-        response = "Not Logged In"
-        make_response(response)
-        return response
-    print("168 request", request)
+        return "Not Logged In", 403
+    
     title = request.form.get('title', "")
     description = request.form.get('description', "")
+    open_answer = request.form.get('open_answer', "")
+    
+    # html escape
+    title = html.escape(title)
+    description = html.escape(description)
+    open_answer = html.escape(open_answer)
+    
     id = "postID" + secrets.token_hex(32)
-    post_collection.insert_one({"_id" : id, "username" : username,"title" : title, "description" : description, 'likeCount' : 0})
-    #Clear the Submission Sheet after and send a message saying Post was sent!
+    image = request.files['image']
+    if image:
+        image_path = save_image(image, id)
+    else:
+        image_path = None
+    
+    
+    post_collection.insert_one({
+        "_id": id,
+        "username": username,
+        "title": title,
+        "description": description,
+        "answer": open_answer,
+        "image_path": image_path,
+        "likeCount": 0
+    })
+    
+    # Clear the Submission Sheet after and send a message saying Post was sent!
     flash('Post submitted successfully!')
     return redirect(url_for('index'))
+
+def save_image(image, id):
+    image_folder = os.path.join(app.root_path, 'static/images')
+    file_extension = os.path.splitext(image.filename)[1]
+    filename = secure_filename(id+file_extension)
+    image_path = os.path.join(image_folder, filename)
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    try:
+        img = Image.open(image.stream)
+        img.save(image_path)
+        img.close()
+        return os.path.join('/static/images', filename)
+    except Exception as e:
+        print(f"Error occurred during saving image: {str(e)}")
+        return None
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=8080)

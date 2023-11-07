@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,18 +16,28 @@
                 document.getElementById('loginForm').style.display = 'block';
             }
         }
+        function toggleAnswerMethod() {
+            var answerMethod = document.getElementById('answer_method').value;
+            var openEndedDiv = document.getElementById('open_ended_answer');
+            
+            if (answerMethod === 'open_ended') {
+                openEndedDiv.style.display = 'block';
+            } else {
+                openEndedDiv.style.display = 'none';
+            }
+        }
+        window.onload = function() {
+            welcome();
+            toggleAnswerMethod();
+        };
     </script>
-
     <script src="static/functions.js"></script>
 </head>
-
-<body onload = "welcome();">
+<body>
 
 <div class="container">
     <h1>Welcome to UB Programmers Project</h1>
-    <div id="username">
-
-    </div>
+    <div id="username"></div>
     <div class="btn-group">
         <button onclick="toggleForm('register')">Register</button>
         <button onclick="toggleForm('login')">Login</button>
@@ -49,44 +58,54 @@
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
         </form>
+        </div>
     </div>
-</div>
 
     <div class="Posts">
-        
         <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 70px;">
-            <form id="postSubmission" class="post-form" action="/post-submission" method="POST">
-                <h2>Submit a Post!</h2>
+            <form id="postSubmission" class="post-form" action="/post-submission" method="POST" enctype="multipart/form-data">
+                <h2>Submit the Question!</h2>
                 <input type="text" name="title" placeholder="Title" required>
                 <br> <br>
-                <textarea id="description" name = "description" placeholder="Description" cols="50" rows="20"></textarea>
+                <textarea id="description" name="description" placeholder="Description" cols="50" rows="4" required></textarea>
+                <br>
+                <label for="image">Upload Image (optional):</label>
+                <input type="file" name="image" id="image">
+                <br>
+                <label for="answer_method">Answer Method:</label>
+                <select name="answer_method" id="answer_method" required onchange="toggleAnswerMethod()">
+                    <option value="open_ended">Open Ended</option>
+                </select>
+                <br>
+                <div id="open_ended_answer" style="display: none;">
+                    <label for="open_answer">Answer:</label>
+                    <input type="text" name="open_answer" id="open_answer">
+                </div>
                 <br>
                 <button type="submit">Post</button>
             </form>
         </div>
         <h1>Posts</h1>
-
-        <div id = "postHistory">
-        </div>  
+        <div id="postHistory"></div>  
     </div>
+</div>
 
-
-    <script>
-        function getUsername() {
-            fetch('/get-username')  
-                .then(response => response.json())
-                .then(data => {
-                    if (data.username) {
-                        document.getElementById('username').innerHTML = `<span class="user-status">Logged in as: ${data.username}</span>`;
-                    } else {
-                        document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }    
-        getUsername();
-    </script>
+<script>
+    function getUsername() {
+        fetch('/get-username')  
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as: ${data.username}</span>`;
+                } else {
+                    document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }    
+    getUsername();
+</script>
 </body>
 </html>
