@@ -70,6 +70,9 @@ hr {
     margin-top: 20px;
     overflow: auto;
     max-height: 700px;
+    margin-top: 20px;
+    overflow: auto;
+    max-height: 700px;
 }
 
 .single-post {
@@ -91,6 +94,15 @@ input[type="text"], input[type="password"], textarea {
     margin-top: 5px;
     border: 1px solid #ddd;
     border-radius: 5px;
+}
+
+input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
 }
 
 input[type="file"] {
