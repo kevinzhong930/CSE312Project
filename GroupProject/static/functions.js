@@ -1,12 +1,57 @@
+const ws = true;
+let socket = null;
+
+const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+function generateString(length) {
+    let result = ' ';
+    const charactersLength = characters.length;
+    for ( let i = 0; i < length; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
+let postForm = document.getElementById("postSubmission");
+postForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    let username = document.getElementById("username").innerHTML
+    let title = document.getElementById("title");
+    let description = document.getElementById("description");
+    let image = document.getElementById("image");
+    let answer = document.getElementById("open_answer")
+    let id = generateString(10);
+    if (username !== "") {
+        socket.send(JSON.stringify({"username": username, "messageType": "question", "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}))
+    }
+})
+
+//Establish a WebSocket connection with the server
+function initWS() {
+    socket = new WebSocket('ws://' + window.location.host + '/websocket');
+
+    //Called whenever data is received from the server over the WebSocket connection
+    socket.onmessage = function (ws_message) {
+        const message = JSON.parse(ws_message.data);
+        const messageType = message.messageType
+        if(messageType === 'question'){
+            addPostToPosts(message);
+        } 
+        else if (messageType === 'timer'){
+            updateTimer(message.postId, message.timeLeft);
+        } 
+        else if (messageType === 'lock-question'){
+            handleTimerEnd(message.postId);
+        }
+    }
+}
+
 //Creating the HTML for each Post
 function postHTML(postJSON) {
     const username = postJSON.username;
     const title = postJSON.title;
     const description = postJSON.description;
-    const postId = postJSON._id;
-    const image = postJSON.image_path;
-    //const likeCount = getLikes(postId);
-    // const likeCount = postJSON.likeCount;
+    const image = postJSON.image_path
+    const postId = postJSON._id;;
 
     let postHTML = "<div class='post-box' id='post_" + postId + "'>";
 
@@ -86,7 +131,9 @@ function clearPosts() {
 //Constantly Calls updatePosts() on startup
 function welcome() {
     updatePosts();
-    // setInterval(updatePosts,2000);
+    if (ws) {
+        initWS();
+    }
 }
 
 function getLikes(postId) {
@@ -115,4 +162,12 @@ async function getLikes2(postId) {
     const response = await fetch('/get-likes/' + postId)
     const data = await response.json()
     return data;
+}
+
+//Function to update the timer for each post
+function updateTimer(timeLeft) {
+    const timerData = document.getElementById('timer');
+    if (timerData) {
+        timerData.textContent = 'Time left: ' + timeLeft + 's';
+    }
 }
