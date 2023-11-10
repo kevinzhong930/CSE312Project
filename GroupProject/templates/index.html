@@ -130,10 +130,10 @@
         updatePosts();
     });
 
-    socket.on('create_grade',function(grade_data){
-        grade_data = JSON.parse(grade_data)
-        gradeHTML(grade_data);
-    });
+    // socket.on('create_grade',function(grade_data){
+    //     grade_data = JSON.parse(grade_data)
+    //     gradeHTML(grade_data);
+    // });
 
 
     let question_submission = document.getElementById("submit-btn");
@@ -162,8 +162,10 @@
     function submitAnswer(postId){
         console.log('answer submitted!');
         //Find the answer written in html + delete it from the html
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
         let answer = document.getElementById('answer_' + postId).value;
-        let dict = JSON.stringify({'postId' : postId, 'user_answer' : answer});
+        let dict = JSON.stringify({'username' : username,'postId' : postId, 'user_answer' : answer});
         socket.emit('submitAnswer',dict);
     }
 
