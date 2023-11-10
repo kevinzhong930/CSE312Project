@@ -162,7 +162,7 @@
     function submitAnswer(postId){
         console.log('answer submitted!');
         //Find the answer written in html + delete it from the html
-        let answer = document.getElementById('answer_').value;
+        let answer = document.getElementById('answer_' + postId).value;
         let dict = JSON.stringify({'postId' : postId, 'user_answer' : answer});
         socket.emit('submitAnswer',dict);
     }

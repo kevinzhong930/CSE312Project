@@ -344,10 +344,10 @@ def handleAnswer(postIDAndAnswer):
     emit('updateHTML')
 
     score = 0
-    if user_answer.isnumeric() != expectedAnswer.isnumeric():
+    if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
         #Not the same Answer
         score = 0
-    elif user_answer.isnumeric() == expectedAnswer.isnumberic():
+    elif str(user_answer).isnumeric() == str(expectedAnswer).isnumeric():
         if int(user_answer) == int(expectedAnswer):
             score = 1
     else:
