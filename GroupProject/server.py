@@ -36,6 +36,9 @@ auth_tokens = db["auth_tokens"]
 #Stores Post History {postId,username,title,description,answer,image}
 post_collection = db["post_collection"]
 
+#Stores Grades {title,description,user_answer,expected_answer,score}
+grade_collection = db["grade_collection"]
+
 @app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
@@ -355,6 +358,7 @@ def handleAnswer(postIDAndAnswer):
             score = 1
     
     out = {'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
+    grade_collection.insert_one(out)
     out = json.dumps(out)
     #Sending this to JS to create HTML for grading of each question
     emit('create_grade',out)
