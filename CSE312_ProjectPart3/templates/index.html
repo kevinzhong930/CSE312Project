@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,7 +66,7 @@
         <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 70px;">
             <form id="postSubmission" class="post-form" enctype="multipart/form-data">
                 <h2>Submit the Question!</h2>
-                <input type="text" name="title" placeholder="Title" required>
+                <input type="text" name="title" placeholder="Title" id = "title" required>
                 <br> <br>
                 <textarea id="description" name="description" placeholder="Description" cols="50" rows="4" required></textarea>
                 <br>
@@ -82,7 +83,7 @@
                     <input type="text" name="open_answer" id="open_answer">
                 </div>
                 <br>
-                <button type="submit">Post</button>
+                <button id="submit-btn" type="button">Post</button>
             </form>
         </div>
         <h1>Posts</h1>
@@ -96,7 +97,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.username) {
-                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as: ${data.username}</span>`;
+                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as:${data.username}</span>`;
                 } else {
                     document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
                 }
@@ -106,6 +107,105 @@
             });
     }    
     getUsername();
+</script>
+
+<!------------------------------------------- WEBSOCKET -------------------------------------------->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+
+<script>
+    const socket = io();
+    var timerStatus = {};
+
+    socket.on('connect', function(){
+        console.log("connected!");
+        socket.emit('connected');
+    });
+
+    socket.on('question_submission',function(question_data){
+        question_data = JSON.parse(question_data);
+        addPostToPosts(question_data);
+    });
+
+    socket.on('updateHTML',function(){
+        updatePosts();
+    });
+
+    socket.on('question_submission',function(question_data){
+        console.log("question submitted socket")
+        console.log(question_data)
+        //question_data = JSON.parse(question_data);
+        //addPostToPosts(question_data);
+        updatePosts()
+    });
+
+
+    socket.on('timeUpdateForClient',(data)=>{
+        console.log('timeUpdateForClient');
+        timerData = JSON.parse(data);
+        questionID = timerData.questionID;
+        timeLeft = timerData.timeLeft;
+        console.log("index.html 147", typeof timeLeft);
+        console.log("index.html 148: timeUpdateForClient", timerData);
+        timerStatus[questionID] = 'running';
+        updateTimer(questionID, timeLeft);
+    });
+
+    socket.on('timeIsUp', function(data) {
+        questionID = data.questionID;
+        console.log("index.html 154: questionID", questionID);
+        updateTimer(questionID, "0");
+        timerStatus[questionID] = 'expired';
+        socket.emit('gradeQuestion', questionID);
+    }); 
+
+    // socket.on('create_grade',function(grade_data){
+    //     grade_data = JSON.parse(grade_data)
+    //     gradeHTML(grade_data);
+    // });
+
+    let question_submission = document.getElementById("submit-btn");
+    question_submission.addEventListener("click", function() {
+        // console.log('submit button clicked!');
+        var username = document.getElementById("username").innerHTML;
+        console.log("server.py 168 username", username);
+        username = username.split(':')[1].split('</span>')[0];
+        // username = username[1];
+        // username = username.split('</span>');
+        // username = username[0];
+        // console.log(username);
+        let title = document.getElementById("title").value;
+        let description = document.getElementById("description").value;
+        let image = document.getElementById("image").innerHTML;
+        let answer = document.getElementById("open_answer").value;
+        let id = generateString(10);
+        if (username != "Guest") {
+            console.log("180 Guest")
+            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
+        }
+        else{
+            console.log('Not Logged In!');
+        }
+        //Clear input fields after submission
+        document.getElementById("title").value = ''; 
+        document.getElementById("description").value = '';
+        document.getElementById("image").innerHTML = ''; 
+        document.getElementById("open_answer").value = '';
+    })
+
+    function submitAnswer(postId){
+        //Check if question expired:
+        if (timerStatus[postId] === 'expired') {
+            alert("Time is up! You can't submit answers anymore.");
+            return;
+        }
+        console.log('answer submitted!');
+        //Find the answer written in html + delete it from the html
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
+        let answer = document.getElementById('answer_' + postId).value;
+        let dict = JSON.stringify({'username' : username,'postId' : postId, 'user_answer' : answer});
+        socket.emit('submitAnswer',dict);
+    }
 </script>
 </body>
 </html>

@@ -12,11 +12,18 @@ import hashlib
 import base64
 import time
 import threading
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, send, emit
+import json
+import random
+import string
+
+#Resources:
+#1. https://www.geeksforgeeks.org/how-to-create-a-countdown-timer-using-python/#
+#
 
 app = Flask(__name__)
 
-socketio = SocketIO(app)
+socketio = SocketIO(app,logger=True)
 
 connections=[]
 
@@ -33,6 +40,9 @@ auth_tokens = db["auth_tokens"]
 
 #Stores Post History {postId,username,title,description,answer,image}
 post_collection = db["post_collection"]
+
+#Stores Grades {username,title,description,user_answer,expected_answer,score}
+grade_collection = db["grade_collection"]
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -66,8 +76,11 @@ def getUsername():
     token = request.cookies.get('auth_token')
     t = None
     for userInfo in auth_tokens.find({}):
-        if bcrypt.checkpw(token.encode('utf-8'),userInfo['token']):
-            t = userInfo
+        if token:
+            if bcrypt.checkpw(token.encode('utf-8'),userInfo['token']):
+                t = userInfo
+        else:
+            current_username = None
     if t:
         current_username = t['username']
     else: 
@@ -92,16 +105,6 @@ def style():
     response.mimetype = "text/css"
     return response
 
-@app.route('/favicon.ico')
-@app.route('/static/favicon.ico')
-def favicon():
-    file = open("static/favicon.ico","rb")
-    file = file.read()
-    response = make_response(file)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.mimetype = "image/ico"
-    return response
-
 @app.route('/visit-counter')
 def cookieCounter():
     if "Cookie" not in request.headers:
@@ -119,39 +122,6 @@ def cookieCounter():
         response = make_response("Cookie Number is: " + visitsNum)
         response.set_cookie(key= "visits", value=visitsNum, max_age = 3600)
         return response
-    
-@app.route('/websocket', methods=['GET'])
-def upgradeToWebsocket(self):
-    #Upgrade to Websocket 
-    key=request.headers.get("Sec-WebSocket-Key", "")
-    appendGUIDKey=key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    appendGUIDKey=appendGUIDKey.encode()
-    #Computes the SHA-1 hash
-    sha1Result=hashlib.sha1(appendGUIDKey).digest()
-    #base64 encoding of the SHA-1 hash
-    websocketKey=base64.b64encode(sha1Result).decode()
-    response= (
-        "HTTP/1.1 101 Switching Protocols" + "\r\n" +
-        "Upgrade: websocket" + "\r\n" +
-        "Connection: Upgrade" + "\r\n" +
-        "Sec-WebSocket-Accept: " + websocketKey + "\r\n\r\n"
-    )
-    responseEncode=response.encode()
-    self.request.sendall(responseEncode)
-
-    connections.append(self)
-     
-    #Authenticate
-    username="Guest"
-    cookie=request.headers.get("Cookie", [])
-    cookieDictionary=self.cookieListToDictionary(cookie)
-    if cookieDictionary:
-        cookieToken=cookieDictionary.get("token", "")
-        if cookieToken:
-            hashedToken=hashlib.sha256(cookieToken.encode()).digest()
-            document=auth_tokens.find_one(({"token": hashedToken}))
-            if document:
-                username=document["username"]
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -224,76 +194,10 @@ def getLikes(postId):
     print(numOfLikes)
     #return numOfLikes
     ##################
-    return jsonify(numOfLikes)
+    return jsonify(numOfLikes)  
 
 class PostForm(FlaskForm):
     image = FileField('Image', validators=[FileRequired()])
-
-@app.route('/post-submission', methods=['POST'])
-def submitPost():
-    username = ""
-    document = None
-    auth_token = request.cookies.get('auth_token')
-    for token in auth_tokens.find({}):
-        if bcrypt.checkpw(auth_token.encode('utf-8'), token['token']):
-            document = token       
-    if document:
-        username = document['username']
-    else:
-        return "Not Logged In", 403
-    title = request.form.get('title', "")
-    description = request.form.get('description', "")
-    open_answer = request.form.get('open_answer', "")
-    #html escape
-    title = html.escape(title)
-    description = html.escape(description)
-    open_answer = html.escape(open_answer)
-    id = "postID" + secrets.token_hex(32)
-    image = request.files['image']
-    if image:
-        image_path = save_image(image, id)
-    else:
-        image_path = None
-    post_collection.insert_one({
-        "_id": id,
-        "username": username,
-        "title": title,
-        "description": description,
-        "answer": open_answer,
-        "image_path": image_path,
-    })
-    #Clear the Submission Sheet after and send a message saying Post was sent!
-    flash('Post submitted successfully!')
-    return redirect(url_for('index'))
-
-def addPost(self, username, data, connections): #data is JSON-formatted string')
-    #Convert the JSON string into a dictionary
-    jsonDict=json.loads(data)
-    question=jsonDict.get("question")
-    answer=jsonDict.get("answer")
-
-    #Check if the user has already submitted an answer to this question
-    document=post_collection.find_one({"username": username})
-    if document:
-        exist=document.get("question","")
-    #User has already submitted an answer, send a message back
-    if exist:
-        ...
-    else:
-        post_collection.insert_one({
-            "username": username,
-            "question": question,
-            "answer": answer
-        })
-
-#Send time updates to the clients
-def timer(question, duration):
-    endTime=time.time()+duration #Calculate time at which the timer should end.
-    while time.time<endTime:
-        timeLeft=int(endTime-time.time)
-        socketio.emit('timeUpdateForClient', {'questionID':question, 'timeLeft': timeLeft})
-    socketio.emit('timeIsUp', {'questionID': question})
-    
 
 def save_image(image, id):
     image_folder = os.path.join(app.root_path, 'static/images')
@@ -311,5 +215,88 @@ def save_image(image, id):
         print(f"Error occurred during saving image: {str(e)}")
         return None
 
+#-----------------------------------------------------WEBSOCKETS--------------------------------------------------------------
+@socketio.on("connected")
+def sendConnectedMessage():
+    print("User has connected!")
+
+@socketio.on('hello')
+def hello_world(data):
+    print('\n\nhello world test\n')
+    emit('hello', 'world')
+
+#Send time updates to the clients
+def timer(questionID):
+    duration = 10
+    while duration:
+        #print("server.py 244 duration", duration)
+        timeLeft = '{:02d} seconds'.format(duration)
+        #print("server.py 246 timeLeft", timeLeft)
+        output = json.dumps({'questionID':questionID, 'timeLeft': timeLeft})
+        socketio.emit('timeUpdateForClient', output)
+        #print("After socketio.emit")
+        socketio.sleep(1)
+        duration = duration -1
+    socketio.emit('timeIsUp', {'message': 'Time is up!','questionID': questionID})
+
+@socketio.on("question_submission")
+def handleQuestion(question_JSON):
+    #Do Question Parsing
+    dict = json.loads(question_JSON) #Dictionary of all Post Form Values
+    # print(f"adding dict: {dict}")
+    post_collection.insert_one(dict)
+    output = json.dumps(dict)
+    emit("question_submission",output)
+    id = dict.get("_id")
+    socketio.start_background_task(timer, id)
+
+answerStorage = {} #Store all answers submitted for a question until timer for question is up. 
+@socketio.on("submitAnswer")
+def storeAnswer(postIDAndAnswer):
+    dict = json.loads(postIDAndAnswer)
+    username = dict['username']
+    postID = dict['postId']
+
+    postInfo = post_collection.find_one({'_id' : postID})
+    #Check if the user submitting the answer is the same as the creator of the question
+    if username == postInfo.get('username'):
+        return
+    answerStorage[postID] = dict
+
+@socketio.on("gradeQuestion")
+def gradeQuestion(postID): #postID should be a string
+    #Check if an answer is submitted for the question
+    print("268 answerStorage", answerStorage)
+    if postID not in answerStorage:
+        return
+    
+    answer_data = answerStorage[postID]
+    user_answer = answer_data['user_answer']
+
+    postInfo = post_collection.find_one({'_id' : postID})
+    expectedAnswer = postInfo['answer']
+    
+    post_collection.delete_one({'_id' : postID})
+
+    del answerStorage[postID]
+    emit('updateHTML')
+    score = 0
+    if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
+        #Not the same Answer
+        score = 0
+    elif str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
+        if int(user_answer) == int(expectedAnswer):
+            score = 1
+    else:
+        if user_answer == expectedAnswer:
+            score = 1
+    # out = {'username' : username ,'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
+    # print(out)
+    # grade_collection.insert_one(out)
+    # out = json.dumps(out)
+    #Sending this to JS to create HTML for grading of each question
+    # emit('create_grade',out)
+
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    #app.run(debug=True, host='0.0.0.0', port=8080)
+    socketio.run(app, host= '0.0.0.0' , port= 8080)
