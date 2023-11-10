@@ -12,7 +12,9 @@ import hashlib
 import base64
 import time
 import threading
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, send, emit
+
+import json
 
 app = Flask(__name__)
 
@@ -120,38 +122,38 @@ def cookieCounter():
         response.set_cookie(key= "visits", value=visitsNum, max_age = 3600)
         return response
     
-@app.route('/websocket', methods=['GET'])
-def upgradeToWebsocket(self):
-    #Upgrade to Websocket 
-    key=request.headers.get("Sec-WebSocket-Key", "")
-    appendGUIDKey=key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    appendGUIDKey=appendGUIDKey.encode()
-    #Computes the SHA-1 hash
-    sha1Result=hashlib.sha1(appendGUIDKey).digest()
-    #base64 encoding of the SHA-1 hash
-    websocketKey=base64.b64encode(sha1Result).decode()
-    response= (
-        "HTTP/1.1 101 Switching Protocols" + "\r\n" +
-        "Upgrade: websocket" + "\r\n" +
-        "Connection: Upgrade" + "\r\n" +
-        "Sec-WebSocket-Accept: " + websocketKey + "\r\n\r\n"
-    )
-    responseEncode=response.encode()
-    self.request.sendall(responseEncode)
+# @app.route('/websocket', methods=['GET'])
+# def upgradeToWebsocket(self):
+#     #Upgrade to Websocket 
+#     key=request.headers.get("Sec-WebSocket-Key", "")
+#     appendGUIDKey=key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+#     appendGUIDKey=appendGUIDKey.encode()
+#     #Computes the SHA-1 hash
+#     sha1Result=hashlib.sha1(appendGUIDKey).digest()
+#     #base64 encoding of the SHA-1 hash
+#     websocketKey=base64.b64encode(sha1Result).decode()
+#     response= (
+#         "HTTP/1.1 101 Switching Protocols" + "\r\n" +
+#         "Upgrade: websocket" + "\r\n" +
+#         "Connection: Upgrade" + "\r\n" +
+#         "Sec-WebSocket-Accept: " + websocketKey + "\r\n\r\n"
+#     )
+#     responseEncode=response.encode()
+#     self.request.sendall(responseEncode)
 
-    connections.append(self)
+#     connections.append(self)
      
-    #Authenticate
-    username="Guest"
-    cookie=request.headers.get("Cookie", [])
-    cookieDictionary=self.cookieListToDictionary(cookie)
-    if cookieDictionary:
-        cookieToken=cookieDictionary.get("token", "")
-        if cookieToken:
-            hashedToken=hashlib.sha256(cookieToken.encode()).digest()
-            document=auth_tokens.find_one(({"token": hashedToken}))
-            if document:
-                username=document["username"]
+#     #Authenticate
+#     username="Guest"
+#     cookie=request.headers.get("Cookie", [])
+#     cookieDictionary=self.cookieListToDictionary(cookie)
+#     if cookieDictionary:
+#         cookieToken=cookieDictionary.get("token", "")
+#         if cookieToken:
+#             hashedToken=hashlib.sha256(cookieToken.encode()).digest()
+#             document=auth_tokens.find_one(({"token": hashedToken}))
+#             if document:
+#                 username=document["username"]
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -229,62 +231,62 @@ def getLikes(postId):
 class PostForm(FlaskForm):
     image = FileField('Image', validators=[FileRequired()])
 
-@app.route('/post-submission', methods=['POST'])
-def submitPost():
-    username = ""
-    document = None
-    auth_token = request.cookies.get('auth_token')
-    for token in auth_tokens.find({}):
-        if bcrypt.checkpw(auth_token.encode('utf-8'), token['token']):
-            document = token       
-    if document:
-        username = document['username']
-    else:
-        return "Not Logged In", 403
-    title = request.form.get('title', "")
-    description = request.form.get('description', "")
-    open_answer = request.form.get('open_answer', "")
-    #html escape
-    title = html.escape(title)
-    description = html.escape(description)
-    open_answer = html.escape(open_answer)
-    id = "postID" + secrets.token_hex(32)
-    image = request.files['image']
-    if image:
-        image_path = save_image(image, id)
-    else:
-        image_path = None
-    post_collection.insert_one({
-        "_id": id,
-        "username": username,
-        "title": title,
-        "description": description,
-        "answer": open_answer,
-        "image_path": image_path,
-    })
-    #Clear the Submission Sheet after and send a message saying Post was sent!
-    flash('Post submitted successfully!')
-    return redirect(url_for('index'))
+# @app.route('/post-submission', methods=['POST'])
+# def submitPost():
+#     username = ""
+#     document = None
+#     auth_token = request.cookies.get('auth_token')
+#     for token in auth_tokens.find({}):
+#         if bcrypt.checkpw(auth_token.encode('utf-8'), token['token']):
+#             document = token       
+#     if document:
+#         username = document['username']
+#     else:
+#         return "Not Logged In", 403
+#     title = request.form.get('title', "")
+#     description = request.form.get('description', "")
+#     open_answer = request.form.get('open_answer', "")
+#     #html escape
+#     title = html.escape(title)
+#     description = html.escape(description)
+#     open_answer = html.escape(open_answer)
+#     id = "postID" + secrets.token_hex(32)
+#     image = request.files['image']
+#     if image:
+#         image_path = save_image(image, id)
+#     else:
+#         image_path = None
+#     post_collection.insert_one({
+#         "_id": id,
+#         "username": username,
+#         "title": title,
+#         "description": description,
+#         "answer": open_answer,
+#         "image_path": image_path,
+#     })
+#     #Clear the Submission Sheet after and send a message saying Post was sent!
+#     flash('Post submitted successfully!')
+#     return redirect(url_for('index'))
 
-def addPost(self, username, data, connections): #data is JSON-formatted string')
-    #Convert the JSON string into a dictionary
-    jsonDict=json.loads(data)
-    question=jsonDict.get("question")
-    answer=jsonDict.get("answer")
+# def addPost(self, username, data, connections): #data is JSON-formatted string')
+#     #Convert the JSON string into a dictionary
+#     jsonDict=json.loads(data)
+#     question=jsonDict.get("question")
+#     answer=jsonDict.get("answer")
 
-    #Check if the user has already submitted an answer to this question
-    document=post_collection.find_one({"username": username})
-    if document:
-        exist=document.get("question","")
-    #User has already submitted an answer, send a message back
-    if exist:
-        ...
-    else:
-        post_collection.insert_one({
-            "username": username,
-            "question": question,
-            "answer": answer
-        })
+#     #Check if the user has already submitted an answer to this question
+#     document=post_collection.find_one({"username": username})
+#     if document:
+#         exist=document.get("question","")
+#     #User has already submitted an answer, send a message back
+#     if exist:
+#         ...
+#     else:
+#         post_collection.insert_one({
+#             "username": username,
+#             "question": question,
+#             "answer": answer
+#         })
 
 #Send time updates to the clients
 def timer(question, duration):
@@ -311,5 +313,57 @@ def save_image(image, id):
         print(f"Error occurred during saving image: {str(e)}")
         return None
 
+#-----------------------------------------------------WEBSOCKETS--------------------------------------------------------------
+@socketio.on("connected")
+def sendConnectedMessage():
+    print("User has connected!")
+
+@socketio.on("question_submission")
+def handleQuestion(question_JSON):
+    #Do Question Parsing
+    dict = json.loads(question_JSON) #Dictionary of all Post Form Values
+    # print(f"adding dict: {dict}")
+    post_collection.insert_one(dict)
+    output = json.dumps(dict)
+    emit("question_submission",output)
+
+@socketio.on("submitAnswer")
+def handleAnswer(postIDAndAnswer):
+    dict = json.loads(postIDAndAnswer)
+
+
+    postID = dict['postId']
+    user_answer = dict['user_answer']
+
+    postInfo = post_collection.find_one({'_id' : postID})
+    title = postInfo['title']
+    description = postInfo['description']
+    expectedAnswer = postInfo['answer']
+
+    post_collection.delete_one({'_id' : postID})
+    emit('updateHTML')
+
+    score = 0
+    if user_answer.isnumeric() != expectedAnswer.isnumeric():
+        #Not the same Answer
+        score = 0
+    elif user_answer.isnumeric() == expectedAnswer.isnumberic():
+        if int(user_answer) == int(expectedAnswer):
+            score = 1
+    else:
+        if user_answer == expectedAnswer:
+            score = 1
+    
+    out = {'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
+    out = json.dumps(out)
+    #Sending this to JS to create HTML for grading of each question
+    emit('create_grade',out)
+
+
+
+
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    #app.run(debug=True, host='0.0.0.0', port=8080)
+    socketio.run(app, host= '0.0.0.0' , port= 8080)
