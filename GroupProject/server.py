@@ -332,6 +332,7 @@ def handleQuestion(question_JSON):
 
 @socketio.on("submitAnswer")
 def handleAnswer(postIDAndAnswer):
+    print("Got Here in Submition")
     dict = json.loads(postIDAndAnswer)
 
     username = dict['username']
@@ -350,7 +351,7 @@ def handleAnswer(postIDAndAnswer):
     if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
         #Not the same Answer
         score = 0
-    elif str(user_answer).isnumeric() == str(expectedAnswer).isnumeric():
+    elif str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
         if int(user_answer) == int(expectedAnswer):
             score = 1
     else:
@@ -358,6 +359,7 @@ def handleAnswer(postIDAndAnswer):
             score = 1
     
     out = {'username' : username ,'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
+    print(out)
     grade_collection.insert_one(out)
     # out = json.dumps(out)
     #Sending this to JS to create HTML for grading of each question
