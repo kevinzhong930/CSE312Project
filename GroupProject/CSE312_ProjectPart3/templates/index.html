@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>UB Programmers Team Project</title>
+    <script>
+        function toggleForm(formType) {
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+
+            if (formType === 'register') {
+                document.getElementById('registrationForm').style.display = 'block';
+            } else if (formType === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+            }
+        }
+        function toggleAnswerMethod() {
+            var answerMethod = document.getElementById('answer_method').value;
+            var openEndedDiv = document.getElementById('open_ended_answer');
+            
+            if (answerMethod === 'open_ended') {
+                openEndedDiv.style.display = 'block';
+            } else {
+                openEndedDiv.style.display = 'none';
+            }
+        }
+        window.onload = function() {
+            welcome();
+            toggleAnswerMethod();
+        };
+    </script>
+    <script src="static/functions.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Welcome to UB Programmers Project</h1>
+    <div id="username"></div>
+    <div class="btn-group">
+        <button onclick="toggleForm('register')">Register</button>
+        <button onclick="toggleForm('login')">Login</button>
+    </div>
+
+    <div style="position: absolute; top: 0; right: 0; padding: 10px; z-index: 100;">
+        <div id="postSubmissionContainer" style="margin-bottom: 20px;"> 
+        <form id="registrationForm" class="auth-form" action="/register" method="POST" style="display: none;">
+            <h2>Register</h2>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Register</button>
+        </form>
+
+        <form id="loginForm" class="auth-form" action="/login" method="POST" style="display: none;">
+            <h2>Login</h2>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        </div>
+    </div>
+
+    <div class="Posts">
+        <div id="postSubmissionContainer" style="position: absolute; top: 60%; right: 0; transform: translateY(-50%); padding: 70px;">
+            <form id="postSubmission" class="post-form" enctype="multipart/form-data">
+                <h2>Submit the Question!</h2>
+                <input type="text" name="title" placeholder="Title" id = "title" required>
+                <br> <br>
+                <textarea id="description" name="description" placeholder="Description" cols="50" rows="4" required></textarea>
+                <br>
+                <label for="image">Upload Image (optional):</label>
+                <input type="file" name="image" id="image">
+                <br>
+                <label for="answer_method">Answer Method:</label>
+                <select name="answer_method" id="answer_method" required onchange="toggleAnswerMethod()">
+                    <option value="open_ended">Open Ended</option>
+                </select>
+                <br>
+                <div id="open_ended_answer" style="display: none;">
+                    <label for="open_answer">Answer:</label>
+                    <input type="text" name="open_answer" id="open_answer">
+                </div>
+                <br>
+                <button id="submit-btn" type="button">Post</button>
+            </form>
+        </div>
+        <h1>Posts</h1>
+        <div id="postHistory"></div>  
+    </div>
+</div>
+
+<script>
+    function getUsername() {
+        fetch('/get-username')  
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as:${data.username}</span>`;
+                } else {
+                    document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }    
+    getUsername();
+</script>
+
+<!-- Button to view personal scores -->
+<button id="viewMyScores" type="button">View My Scores</button>
+
+<!-- Button to view scores of their questions -->
+<button id="viewQuestionScores">View Scores of My Questions</button>
+
+<!------------------------------------------- WEBSOCKET -------------------------------------------->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+
+<script>
+    const socket = io();
+    var timerStatus = {};
+
+    socket.on('connect', function(){
+        console.log("connected!");
+        socket.emit('connected');
+    });
+
+    socket.on('question_submission',function(question_data){
+        question_data = JSON.parse(question_data);
+        addPostToPosts(question_data);
+    });
+
+    socket.on('updateHTML',function(){
+        updatePosts();
+    });
+
+    socket.on('question_submission',function(question_data){
+        console.log("question submitted socket")
+        console.log(question_data)
+        //question_data = JSON.parse(question_data);
+        //addPostToPosts(question_data);
+        updatePosts()
+    });
+
+
+    socket.on('timeUpdateForClient',(data)=>{
+        console.log('timeUpdateForClient');
+        timerData = JSON.parse(data);
+        questionID = timerData.questionID;
+        timeLeft = timerData.timeLeft;
+        console.log("index.html 147", typeof timeLeft);
+        console.log("index.html 148: timeUpdateForClient", timerData);
+        timerStatus[questionID] = 'running';
+        updateTimer(questionID, timeLeft);
+    });
+
+    socket.on('timeIsUp', function(data) {
+        questionID = data.questionID;
+        console.log("index.html 154: questionID", questionID);
+        updateTimer(questionID, "0");
+        timerStatus[questionID] = 'expired';
+        socket.emit('gradeQuestion', questionID);
+    }); 
+
+    let question_submission = document.getElementById("submit-btn");
+    question_submission.addEventListener("click", function() {
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
+        let title = document.getElementById("title").value;
+        let description = document.getElementById("description").value;
+        let image = document.getElementById("image").innerHTML;
+        let answer = document.getElementById("open_answer").value;
+        let id = generateString(10);
+        if (username != "Guest") {
+            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
+        }
+        else{
+            console.log('Not Logged In!');
+        }
+        //Clear input fields after submission
+        document.getElementById("title").value = ''; 
+        document.getElementById("description").value = '';
+        document.getElementById("image").innerHTML = ''; 
+        document.getElementById("open_answer").value = '';
+    })
+
+    let user_view_score = document.getElementById("viewMyScores");
+    user_view_score.addEventListener("click", function() {
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
+        let title = document.getElementById("title").value;
+        let description = document.getElementById("description").value;
+        let image = document.getElementById("image").innerHTML;
+        let score = document.getElementById("score").value;
+        let id = generateString(10);
+        if (username != "Guest") {
+            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
+        }
+        else{
+            console.log('Not Logged In!');
+        }
+    })
+
+    function submitAnswer(postId){
+        //Check if question expired:
+        if (timerStatus[postId] === 'expired') {
+            alert("Time is up! You can't submit answers anymore.");
+            return;
+        }
+        console.log('answer submitted!');
+        //Find the answer written in html + delete it from the html
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
+        let answer = document.getElementById('answer_' + postId).value;
+        let dict = JSON.stringify({'username' : username,'postId' : postId, 'user_answer' : answer});
+        socket.emit('submitAnswer',dict);
+    }
+</script>
+</body>
+</html>
