@@ -11,11 +11,6 @@ function generateString(length) {
     return result;
 }
 
-//Creating the HTML for each grade
-function gradeHTML(postJSON) {
-    
-}
-
 //Creating the HTML for each Post
 function postHTML(postJSON) {
     const username = postJSON.username;
@@ -51,8 +46,6 @@ function postHTML(postJSON) {
     if (image) {
         postHTML += "<img src='" + image + "' alt='Image' style='max-width: 100%; display: block; margin-bottom: 10px;'>";
     }
-    //Display the Like/Dislike Buttons and the Counter for Likes
-    // postHTML +=  likeCount + " likes  " + "<button onclick='likePost(\"" + postId + "\")'>LIKE</button>" ;
 
     // Add an input box for the answer.
     postHTML += "<input type='text' placeholder='Enter your answer' id='answer_" + postId + "'><br>";
@@ -159,6 +152,3 @@ function updateTimer(questionID, timeLeft) {
         }
     }
 }
-
-//Function Create Grading HTML
-

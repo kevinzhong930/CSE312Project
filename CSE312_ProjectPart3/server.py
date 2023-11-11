@@ -19,7 +19,7 @@ import string
 
 #Resources:
 #1. https://www.geeksforgeeks.org/how-to-create-a-countdown-timer-using-python/#
-#
+######
 
 app = Flask(__name__)
 
@@ -43,6 +43,8 @@ post_collection = db["post_collection"]
 
 #Stores Grades {username,title,description,user_answer,expected_answer,score}
 grade_collection = db["grade_collection"]
+
+answerStorage = {} #Store all answers submitted for a question until timer for question is up. 
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -250,52 +252,64 @@ def handleQuestion(question_JSON):
     id = dict.get("_id")
     socketio.start_background_task(timer, id)
 
-answerStorage = {} #Store all answers submitted for a question until timer for question is up. 
 @socketio.on("submitAnswer")
 def storeAnswer(postIDAndAnswer):
+    print("256 storeAnswer")
     dict = json.loads(postIDAndAnswer)
     username = dict['username']
     postID = dict['postId']
+    answer = dict['user_answer']
+    newDictionary={'username' : username,'postId' : postID, 'user_answer' : answer}
+    print("263", newDictionary)
 
     postInfo = post_collection.find_one({'_id' : postID})
     #Check if the user submitting the answer is the same as the creator of the question
-    if username == postInfo.get('username'):
-        return
-    answerStorage[postID] = dict
+    #if username == postInfo.get('username'):
+        #return
+    
+    if postID in answerStorage:
+        answerStorage[postID] = answerStorage[postID].append(newDictionary)
+    else:
+        answerStorage[postID] = [newDictionary]
+    print("274 answerStorage", answerStorage)
 
 @socketio.on("gradeQuestion")
 def gradeQuestion(postID): #postID should be a string
     #Check if an answer is submitted for the question
-    print("268 answerStorage", answerStorage)
+    print("279 answerStorage", answerStorage)
     if postID not in answerStorage:
+        print("postID not in answerStorage")
         return
     
-    answer_data = answerStorage[postID]
-    user_answer = answer_data['user_answer']
+    answer_data = answerStorage[postID] #list
+    for answer in answer_data:
+        user_answer = answer['user_answer']
 
-    postInfo = post_collection.find_one({'_id' : postID})
-    expectedAnswer = postInfo['answer']
-    
-    post_collection.delete_one({'_id' : postID})
+        postInfo = post_collection.find_one({'_id' : postID})
+        title = postInfo['title']
+        description = postInfo['description']
+        expectedAnswer = postInfo['answer']
+        
+        print("291 postID", postID)
+        post_collection.delete_one({'_id': postID})
 
-    del answerStorage[postID]
-    emit('updateHTML')
-    score = 0
-    if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
-        #Not the same Answer
+        del answerStorage[postID]
+        emit('updateHTML')
         score = 0
-    elif str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
-        if int(user_answer) == int(expectedAnswer):
-            score = 1
-    else:
-        if user_answer == expectedAnswer:
-            score = 1
-    # out = {'username' : username ,'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
-    # print(out)
-    # grade_collection.insert_one(out)
-    # out = json.dumps(out)
-    #Sending this to JS to create HTML for grading of each question
-    # emit('create_grade',out)
+        if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
+            #Not the same answer
+            score = 0
+        elif str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
+            if int(user_answer) == int(expectedAnswer):
+                score = 1
+        else:
+            if user_answer == expectedAnswer:
+                score = 1
+        out = {'username' : answer['username'] ,'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
+        #print("server.py 294 out", out)
+        grade_collection.insert_one(out)
+        #Sending this to JS to create HTML for grading of each question
+        #emit('create_grade',out)
 
 if __name__ == "__main__":
     #app.run(debug=True, host='0.0.0.0', port=8080)

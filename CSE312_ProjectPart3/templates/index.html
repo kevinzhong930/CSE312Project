@@ -109,6 +109,12 @@
     getUsername();
 </script>
 
+<!-- Button to view personal scores -->
+<button id="viewMyScores" type="button">View My Scores</button>
+
+<!-- Button to view scores of their questions -->
+<button id="viewQuestionScores">View Scores of My Questions</button>
+
 <!------------------------------------------- WEBSOCKET -------------------------------------------->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
 
@@ -158,28 +164,16 @@
         socket.emit('gradeQuestion', questionID);
     }); 
 
-    // socket.on('create_grade',function(grade_data){
-    //     grade_data = JSON.parse(grade_data)
-    //     gradeHTML(grade_data);
-    // });
-
     let question_submission = document.getElementById("submit-btn");
     question_submission.addEventListener("click", function() {
-        // console.log('submit button clicked!');
         var username = document.getElementById("username").innerHTML;
-        console.log("server.py 168 username", username);
         username = username.split(':')[1].split('</span>')[0];
-        // username = username[1];
-        // username = username.split('</span>');
-        // username = username[0];
-        // console.log(username);
         let title = document.getElementById("title").value;
         let description = document.getElementById("description").value;
         let image = document.getElementById("image").innerHTML;
         let answer = document.getElementById("open_answer").value;
         let id = generateString(10);
         if (username != "Guest") {
-            console.log("180 Guest")
             socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
         }
         else{
@@ -190,6 +184,23 @@
         document.getElementById("description").value = '';
         document.getElementById("image").innerHTML = ''; 
         document.getElementById("open_answer").value = '';
+    })
+
+    let user_view_score = document.getElementById("viewMyScores");
+    user_view_score.addEventListener("click", function() {
+        var username = document.getElementById("username").innerHTML;
+        username = username.split(':')[1].split('</span>')[0];
+        let title = document.getElementById("title").value;
+        let description = document.getElementById("description").value;
+        let image = document.getElementById("image").innerHTML;
+        let score = document.getElementById("score").value;
+        let id = generateString(10);
+        if (username != "Guest") {
+            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
+        }
+        else{
+            console.log('Not Logged In!');
+        }
     })
 
     function submitAnswer(postId){
