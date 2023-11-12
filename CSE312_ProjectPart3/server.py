@@ -16,7 +16,7 @@ from flask_socketio import SocketIO, send, emit
 import json
 import random
 import string
-#test
+
 #Resources:
 #1. https://www.geeksforgeeks.org/how-to-create-a-countdown-timer-using-python/#
 ######
@@ -266,6 +266,7 @@ def handleQuestion(question_JSON):
     id = dict.get("_id")
     socketio.start_background_task(timer, id)
 
+answerStorage_lock = threading.Lock()
 @socketio.on("submitAnswer")
 def storeAnswer(postIDAndAnswer):
     print("256 storeAnswer")
@@ -281,46 +282,43 @@ def storeAnswer(postIDAndAnswer):
     #if username == postInfo.get('username'):
         #return
     
-    if postID in answerStorage:
-        answerStorage[postID] = answerStorage[postID].append(newDictionary)
-    else:
-        answerStorage[postID] = [newDictionary]
+    with answerStorage_lock:
+        if postID in answerStorage:
+            answerStorage[postID].append(newDictionary)
+        else:
+            answerStorage[postID] = [newDictionary]
+            
     print("274 answerStorage", answerStorage)
 
 @socketio.on("gradeQuestion")
-def gradeQuestion(postID): #postID should be a string
-    #Check if an answer is submitted for the question
-    print("279 answerStorage", answerStorage)
-    if postID not in answerStorage:
-        print("postID not in answerStorage")
-        return
-    
-    answer_data = answerStorage[postID] #list
+def gradeQuestion(postID):  # postID should be a string
+    with answerStorage_lock:
+        if postID not in answerStorage:
+            print("postID not in answerStorage")
+            return
+
+        answer_data = answerStorage.pop(postID, [])
+
+    postInfo = post_collection.find_one({'_id' : postID})
+    title = postInfo['title']
+    description = postInfo['description']
+    expectedAnswer = postInfo['answer']
+
     for answer in answer_data:
         user_answer = answer['user_answer']
-
-        postInfo = post_collection.find_one({'_id' : postID})
-        title = postInfo['title']
-        description = postInfo['description']
-        expectedAnswer = postInfo['answer']
-        
-        print("291 postID", postID)
-        post_collection.delete_one({'_id': postID})
-
-        del answerStorage[postID]
-        emit('updateHTML')
         score = 0
-        if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
-            #Not the same answer
+
+        try:
+            if str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
+                score = 1 if int(user_answer) == int(expectedAnswer) else 0
+            else:
+                score = 1 if user_answer.strip().lower() == expectedAnswer.strip().lower() else 0
+        except ValueError:
             score = 0
-        elif str(user_answer).isnumeric() and str(expectedAnswer).isnumeric():
-            if int(user_answer) == int(expectedAnswer):
-                score = 1
-        else:
-            if user_answer == expectedAnswer:
-                score = 1
-        out = {'username' : answer['username'] ,'title' : title, 'description' : description, 'user_answer' : user_answer, 'expected_answer' : expectedAnswer, 'score' : score}
-        #print("server.py 294 out", out)
+
+        out = {'username': answer['username'], 'title': title, 'description': description,
+               'user_answer': user_answer, 'expected_answer': expectedAnswer, 'score': score}
+        print("server.py 294 out", out)
         grade_collection.insert_one(out)
         #Sending this to JS to create HTML for grading of each question
         #emit('create_grade',out)
