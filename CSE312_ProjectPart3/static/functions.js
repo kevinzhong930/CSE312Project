@@ -138,16 +138,13 @@ async function getLikes2(postId) {
 
 //Function to update the timer for each post
 function updateTimer(questionID, timeLeft) {
-    console.log("functions.js 148", typeof timeLeft);
     //timer_123 from <div id='timer_" + postId
     const timerData = document.getElementById('timer_' + questionID);
     if (timerData) {
         if (timeLeft==="0"){
-            console.log("functions.js 153 enter if statement");
             timerData.textContent = 'Time Left: Time Is Up';
         }
         else {
-            console.log("Updating timer for question:", questionID, "with time left:", timeLeft);
             timerData.textContent = 'Time Left: ' + timeLeft + 's';
         }
     }

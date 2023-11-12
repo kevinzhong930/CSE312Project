@@ -19,7 +19,7 @@ import string
 
 #Resources:
 #1. https://www.geeksforgeeks.org/how-to-create-a-countdown-timer-using-python/#
-######
+######Delete Post with Unsubmitted Answer
 
 app = Flask(__name__)
 
@@ -216,6 +216,18 @@ def save_image(image, id):
     except Exception as e:
         print(f"Error occurred during saving image: {str(e)}")
         return None
+    
+@app.route('/static/images/<imageId>', methods = ['GET'])
+def returnImage(imageId):
+    print('found Image')
+    requestedFile = open('static/images/' + imageId +'jpg','rb')
+    file = requestedFile.read()
+    response = make_response(file)
+    response.mimetype = 'image/jpeg'
+    response.content_length = len(file)
+    return response
+
+
 
 #-----------------------------------------------------WEBSOCKETS--------------------------------------------------------------
 @socketio.on("connected")
@@ -226,6 +238,26 @@ def sendConnectedMessage():
 def hello_world(data):
     print('\n\nhello world test\n')
     emit('hello', 'world')
+
+@socketio.on('save_image')
+def handleImage(imageData):
+    data = json.loads(imageData)
+    postId = data['postId']
+    byteDict = data['imageData']
+
+    imageBytes =  bytearray()
+    for i in byteDict:
+        byte = bytearray(int.to_bytes(byteDict[i],1,'big'))
+        imageBytes.extend(byte)
+    print(imageBytes)
+
+
+    print(f'image is static/images/' + postId)
+
+    with open('static/images/' + postId + 'jpg', 'wb') as imageFile:
+        imageFile.write(imageBytes)
+
+
 
 #Send time updates to the clients
 def timer(questionID):
@@ -260,7 +292,6 @@ def storeAnswer(postIDAndAnswer):
     postID = dict['postId']
     answer = dict['user_answer']
     newDictionary={'username' : username,'postId' : postID, 'user_answer' : answer}
-    print("263", newDictionary)
 
     postInfo = post_collection.find_one({'_id' : postID})
     #Check if the user submitting the answer is the same as the creator of the question
@@ -271,12 +302,17 @@ def storeAnswer(postIDAndAnswer):
         answerStorage[postID] = answerStorage[postID].append(newDictionary)
     else:
         answerStorage[postID] = [newDictionary]
-    print("274 answerStorage", answerStorage)
+
+@socketio.on("deleteQuestion")
+def deleteQuestion(postID):
+    print("307 delete question")
+    post_collection.delete_one({'_id': postID})
+    emit('updateHTML')
+
 
 @socketio.on("gradeQuestion")
 def gradeQuestion(postID): #postID should be a string
     #Check if an answer is submitted for the question
-    print("279 answerStorage", answerStorage)
     if postID not in answerStorage:
         print("postID not in answerStorage")
         return
@@ -290,11 +326,6 @@ def gradeQuestion(postID): #postID should be a string
         description = postInfo['description']
         expectedAnswer = postInfo['answer']
         
-        print("291 postID", postID)
-        post_collection.delete_one({'_id': postID})
-
-        del answerStorage[postID]
-        emit('updateHTML')
         score = 0
         if str(user_answer).isnumeric() != str(expectedAnswer).isnumeric():
             #Not the same answer

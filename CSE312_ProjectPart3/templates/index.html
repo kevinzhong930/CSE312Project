@@ -146,22 +146,20 @@
 
 
     socket.on('timeUpdateForClient',(data)=>{
-        console.log('timeUpdateForClient');
         timerData = JSON.parse(data);
         questionID = timerData.questionID;
         timeLeft = timerData.timeLeft;
-        console.log("index.html 147", typeof timeLeft);
-        console.log("index.html 148: timeUpdateForClient", timerData);
         timerStatus[questionID] = 'running';
         updateTimer(questionID, timeLeft);
     });
 
     socket.on('timeIsUp', function(data) {
         questionID = data.questionID;
-        console.log("index.html 154: questionID", questionID);
         updateTimer(questionID, "0");
         timerStatus[questionID] = 'expired';
         socket.emit('gradeQuestion', questionID);
+        socket.emit('deleteQuestion', questionID);
+        console.log("time is up. delete: ", questionID)
     }); 
 
     let question_submission = document.getElementById("submit-btn");
@@ -170,11 +168,30 @@
         username = username.split(':')[1].split('</span>')[0];
         let title = document.getElementById("title").value;
         let description = document.getElementById("description").value;
-        let image = document.getElementById("image").innerHTML;
+        let image = document.getElementById("image");
         let answer = document.getElementById("open_answer").value;
-        let id = generateString(10);
+        let id = generateString(10).replace(' ','');
+        console.log(id)
+
+
+        let imagePath = '';
+        //Check for Image
+        if (image.value !== ""){
+            console.log('There is an image!')
+            imagePath = 'static/images/' + id;
+            console.log(imagePath);
+            let file = image.files[0];
+            let reader = new FileReader();
+            reader.onload =  function(){
+                console.log(reader.result);
+                let bytes = new Uint8Array(reader.result);
+                socket.emit('save_image',JSON.stringify({'postId' : id, 'imageData' : bytes}));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
         if (username != "Guest") {
-            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
+            socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": imagePath, "answer":answer, "_id": id}));
         }
         else{
             console.log('Not Logged In!');
