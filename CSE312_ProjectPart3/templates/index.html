@@ -97,6 +97,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.username) {
+                    const verificationStatus = data.verified ? 'Verified' : 'Not Verified';
                     document.getElementById('username').innerHTML = `<span class="user-status">Logged in as:${data.username}</span>`;
                 } else {
                     document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
@@ -234,23 +235,6 @@
         document.getElementById("image").value = ''; 
         document.getElementById("open_answer").value = '';
     })
-
-    // let user_view_score = document.getElementById("viewMyScores");
-    // user_view_score.addEventListener("click", function() {
-    //     var username = document.getElementById("username").innerHTML;
-    //     username = username.split(':')[1].split('</span>')[0];
-    //     let title = document.getElementById("title").value;
-    //     let description = document.getElementById("description").value;
-    //     let image = document.getElementById("image").innerHTML;
-    //     let score = document.getElementById("score").value;
-    //     let id = generateString(10);
-    //     if (username != "Guest") {
-    //         socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
-    //     }
-    //     else{
-    //         console.log('Not Logged In!');
-    //     }
-    // })
 
     async function submitAnswer(postId) {
     try {

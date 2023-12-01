@@ -1,93 +1,60 @@
 import bcrypt
 import secrets
 from pymongo import MongoClient
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, escape, jsonify
+from flask import Flask, render_template, request, redirect, url_for, make_response, escape, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
 from werkzeug.utils import secure_filename
 from PIL import Image
-import html
 import os
-import hashlib
-import base64
-import time
 import threading
 from flask_socketio import SocketIO, send, emit
 import json
-import random
-import string
-
-#Resources:
-#1. https://www.geeksforgeeks.org/how-to-create-a-countdown-timer-using-python/#
-######
+from flask_mail import Mail, Message
+import uuid
+from itsdangerous import SignatureExpired
+from itsdangerous import URLSafeTimedSerializer
+from config import setVar
+#Resource:
+#1. https://realpython.com/handling-email-confirmation-in-flask/
+#2. https://www.freecodecamp.org/news/setup-email-verification-in-flask-app/
+#3. https://realpython.com/handling-email-confirmation-in-flask/#send-email
 
 app = Flask(__name__)
 
-socketio = SocketIO(app,logger=True)
-
-connections=[]
+socketio = SocketIO(app)
 
 client = MongoClient("mongodb://mongo:27017/")
 
 db = client["database"]         
-app.secret_key = "secret_Key"
-
 #Stores usernames and passwords {'username': username_val, 'password': password_val , 'salt': salt_val} 
 user_db = db["user_db"]                             
-
 #Stores authentication tokens {'token': token_val, 'username': username_val}
-auth_tokens = db["auth_tokens"]     
-
+auth_tokens = db["auth_tokens"]   
 #Stores Post History {postId,username,title,description,answer,image}
 post_collection = db["post_collection"]
-
 #Stores Grades {username,title,description,user_answer,expected_answer,score}
 grade_collection = db["grade_collection"]
+#Store all answers submitted for a question until timer for question is up. 
+answerStorage = {}
+connections=[]
 
-answerStorage = {} #Store all answers submitted for a question until timer for question is up. 
+app.secret_key = "secret_Key"
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-@app.route('/register', methods=['POST'])
-def register():
-    if request.method == 'POST':
-        #HTML injection, escape all HTML characters in the username.
-        user_name = escape(request.form['username'])
-        password = request.form['password']
-        #Check if a user name is already exists
-        existing_user = user_db.find_one({'name': user_name})
-        #Check username and password are filled
-        if not user_name or not password:
-            return "Username or password cannot be empty", 400
-        #Notify if the username is already taken
-        if existing_user:
-            return "Username already exists.", 400
-        salt = bcrypt.gensalt()
-        hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
-        user_db.insert_one({'name': user_name, 'password': hash_pass})
-        response = make_response(render_template('register.html'))
-        return response
-    return render_template('index.html')    
-
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+setVar()
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+mail = Mail(app)  
 
 @app.route('/') 
 def index():
     return render_template('index.html')
-
-@app.route('/get-username')
-#Displays username
-def getUsername():
-    token = request.cookies.get('auth_token')
-    t = None
-    for userInfo in auth_tokens.find({}):
-        if token:
-            if bcrypt.checkpw(token.encode('utf-8'),userInfo['token']):
-                t = userInfo
-        else:
-            current_username = None
-    if t:
-        current_username = t['username']
-    else: 
-        current_username = None
-    return jsonify({'username': current_username})
 
 @app.route('/static/functions.js')
 def functions():
@@ -107,30 +74,75 @@ def style():
     response.mimetype = "text/css"
     return response
 
-@app.route('/visit-counter')
-def cookieCounter():
-    if "Cookie" not in request.headers:
-        response = make_response("Cookie Number is: 1")
-        response.mimetype = "text/plain"
-        response.set_cookie(key= "visits", value= "1", max_age= 3600)
+@app.route('/get-username')
+#Displays username
+def getUsername():
+    token = request.cookies.get('auth_token')
+    if token:
+        user_info = auth_tokens.find_one({'token': token})
+        if user_info:
+            user = user_db.find_one({'username': user_info['username']})
+            if user:
+                return jsonify({'username': user['username'], 'verified': user.get('verified', False)})
+    return jsonify({'username': None})
+
+@app.route('/register', methods=['POST'])
+def register():
+    if request.method == 'POST':
+        #HTML injection, escape all HTML characters in the username.
+        user_name = escape(request.form['username']) #email
+        password = request.form['password']
+        #Check if a user name is already exists
+        existing_user = user_db.find_one({'username': user_name})
+        #Check username and password are filled
+        if not user_name or not password:
+            return "Username or password cannot be empty", 400
+        #Notify if the username is already taken
+        if existing_user:
+            return "Username already exists.", 400
+        #Add user to database
+        salt = bcrypt.gensalt()
+        hash_pass = bcrypt.hashpw(password.encode('utf-8'), salt)
+        token = serializer.dumps(user_name, salt='email-confirm')
+        user_db.insert_one({'username': user_name, 'password': hash_pass, 'token': token, 'verified': False})
+        #Send verification email
+        message = Message('Confirm Your Email', sender=os.environ.get('MAIL_USERNAME'), recipients=[user_name])
+        link = url_for('confirm_email', token=token, _external=True)
+        message.body = 'Your link is {}'.format(link)
+        mail.send(message)
+        response = make_response(render_template('register.html'))
         return response
-    else:
-        splitCookieList = request.headers["Cookie"].split(";")
-        visitsString = splitCookieList[0]
-        splitVisitsString = visitsString.split("=")
-        visitsNum = int(splitVisitsString[-1])
-        visitsNum += 1
-        visitsNum = str(visitsNum)
-        response = make_response("Cookie Number is: " + visitsNum)
-        response.set_cookie(key= "visits", value=visitsNum, max_age = 3600)
-        return response
+    return render_template('index.html')  
+
+def confirm_token(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm', max_age=3600)
+        return email
+    except Exception:
+        return False
+    
+@app.route('/confirm_email/<token>')
+def confirm_email(token):
+    email = confirm_token(token)
+    print("129 email", email)
+    if email:
+        document = user_db.find_one({'username': email})
+        if document:
+            verify = document.get("verified")
+            if verify == False:
+                user_db.update_one({'username': email}, { '$set': {'verified': True}})
+                return "Email successfully verified."
+            elif verify == True:
+                return "Email is already verified."
+        else:
+            return "User not found."
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
         username = request.form['username']
         password = request.form['password']
-        user_data = user_db.find_one({"name": username})
+        user_data = user_db.find_one({"username": username})
         if user_data:
             hashed_PW = bcrypt.checkpw(password.encode('utf-8'), user_data['password'])
             if hashed_PW:
@@ -151,52 +163,13 @@ def login():
             raise Exception()
     except Exception:
         return response, 400
-    
+
 @app.route('/post-history')
 def post_history():
     posts = list(post_collection.find({}))
     for post in posts:
         post['_id'] = str(post['_id'])
     return jsonify(posts)
-
-@app.route('/post-likes/<postId>', methods=['POST'])
-def likeFunction(postId):
-    print(postId)
-    post = post_collection.find_one({"_id" : postId})
-    auth_token = request.cookies.get('auth_token')
-    username = ''
-    if auth_token:
-        for token in auth_tokens.find({}):
-            if bcrypt.checkpw(auth_token.encode('utf-8'),token['token']):
-                username = token['username']
-        likeHolder = False
-        print(post)
-        for key in post:
-            if key == username:
-                likeHolder = True
-        if likeHolder == True:
-            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] - 1}})
-            post = post_collection.find_one({"_id" : postId})
-            post_collection.update_one(post,{'$unset' : {username : ""}})
-        else:
-            post_collection.update_one(post,{'$set' : {username : ""}})
-            post_collection.update_one(post,{'$set' : {'likeCount' : post['likeCount'] + 1}})
-        return redirect(url_for('index'))
-    else:
-        response = "Not Logged In"
-        make_response(response)
-        return response
-
-@app.route('/get-likes/<postId>', methods=['GET'])
-def getLikes(postId):
-    post = post_collection.find_one({'_id' : postId})
-    numOfLikes = len(post) - 4
-    numOfLikes = str(numOfLikes)
-    make_response(numOfLikes)
-    print(numOfLikes)
-    #return numOfLikes
-    ##################
-    return jsonify(numOfLikes)  
 
 class PostForm(FlaskForm):
     image = FileField('Image', validators=[FileRequired()])
@@ -219,7 +192,6 @@ def save_image(image, id):
     
 @app.route('/save-image-websocket', methods=['POST'])
 def save_image_websocket():
-    print(request.files)
     id = secrets.token_hex(32)
     if 'image' in request.files:
         image = request.files['image']
@@ -315,28 +287,19 @@ def check():
         "timeUp": TimeUp
     }
     return jsonify(response_data)
-    
 
 #-----------------------------------------------------WEBSOCKETS--------------------------------------------------------------
 @socketio.on("connected")
 def sendConnectedMessage():
     print("User has connected!")
 
-@socketio.on('hello')
-def hello_world(data):
-    print('\n\nhello world test\n')
-    emit('hello', 'world')
-
 #Send time updates to the clients
 def timer(questionID):
     duration = 60
     while duration:
-        #print("server.py 244 duration", duration)
         timeLeft = '{:02d} second'.format(duration)
-        #print("server.py 246 timeLeft", timeLeft)
         output = json.dumps({'questionID':questionID, 'timeLeft': timeLeft})
         socketio.emit('timeUpdateForClient', output)
-        #print("After socketio.emit")
         socketio.sleep(1)
         duration = duration -1
     socketio.emit('timeIsUp', {'message': 'Time is up!','questionID': questionID})
@@ -345,7 +308,6 @@ def timer(questionID):
 def handleQuestion(question_JSON):
     #Do Question Parsing
     dict = json.loads(question_JSON) #Dictionary of all Post Form Values
-    # print(f"adding dict: {dict}")
     post_collection.insert_one(dict)
     output = json.dumps(dict)
     emit("question_submission",output,broadcast=True)
@@ -355,13 +317,11 @@ def handleQuestion(question_JSON):
 answerStorage_lock = threading.Lock()
 @socketio.on("submitAnswer")
 def storeAnswer(postIDAndAnswer):
-    print("256 storeAnswer")
     dict = json.loads(postIDAndAnswer)
     username = dict['username']
     postID = dict['postId']
     answer = dict['user_answer']
     newDictionary={'username' : username,'postId' : postID, 'user_answer' : answer}
-    print("263", newDictionary)
 
     postInfo = post_collection.find_one({'_id' : postID})
     #Check if the user submitting the answer is the same as the creator of the question
@@ -373,8 +333,6 @@ def storeAnswer(postIDAndAnswer):
             answerStorage[postID].append(newDictionary)
         else:
             answerStorage[postID] = [newDictionary]
-            
-    print("274 answerStorage", answerStorage)
 
 @socketio.on("QuestionEnd")
 def QuestionEnd(postID):
@@ -384,7 +342,6 @@ def QuestionEnd(postID):
 def gradeQuestion(postID):  # postID should be a string
     with answerStorage_lock:
         if postID not in answerStorage:
-            print("postID not in answerStorage")
             return
 
         answer_data = answerStorage.pop(postID, [])
@@ -411,10 +368,7 @@ def gradeQuestion(postID):  # postID should be a string
         out = {'creater':creater,'username': answer['username'], 'title': title, 'description': description,
                'user_answer': user_answer, 'expected_answer': expectedAnswer, 'score': score,
                'question_id':question_id}
-        print("server.py 294 out", out)
         grade_collection.insert_one(out)
-        #Sending this to JS to create HTML for grading of each question
-        #emit('create_grade',out)
 
 if __name__ == "__main__":
     #app.run(debug=True, host='0.0.0.0', port=8080)
