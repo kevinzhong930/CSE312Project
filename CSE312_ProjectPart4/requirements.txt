@@ -18,3 +18,6 @@ pymongo
 bcrypt
 Flask-WTF
 Pillow
+Flask-Mail
+itsdangerous
+Flask-Limiter

@@ -39,6 +39,7 @@
 <div class="container">
     <h1>Welcome to UB Programmers Project</h1>
     <div id="username"></div>
+    <div id="verification"></div>
     <div class="btn-group">
         <button onclick="toggleForm('register')">Register</button>
         <button onclick="toggleForm('login')">Login</button>
@@ -97,7 +98,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.username) {
-                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as:${data.username}</span>`;
+                    document.getElementById('username').innerHTML = `<span class="user-status">Logged in as: ${data.username}</span>`;
+                    const verificationStatus = data.verified ? 'Verified' : 'Not Verified';
+                    document.getElementById('verification').innerHTML = `<span class="ver-status">Verification Status: ${verificationStatus}</span>`;
                 } else {
                     document.getElementById('username').innerHTML = '<span class="user-status">Not logged in</span>';
                 }
@@ -234,23 +237,6 @@
         document.getElementById("image").value = ''; 
         document.getElementById("open_answer").value = '';
     })
-
-    // let user_view_score = document.getElementById("viewMyScores");
-    // user_view_score.addEventListener("click", function() {
-    //     var username = document.getElementById("username").innerHTML;
-    //     username = username.split(':')[1].split('</span>')[0];
-    //     let title = document.getElementById("title").value;
-    //     let description = document.getElementById("description").value;
-    //     let image = document.getElementById("image").innerHTML;
-    //     let score = document.getElementById("score").value;
-    //     let id = generateString(10);
-    //     if (username != "Guest") {
-    //         socket.emit("question_submission",JSON.stringify({"username": username, "title": title, "description": description, "image_path": image, "answer":answer, "_id": id}));
-    //     }
-    //     else{
-    //         console.log('Not Logged In!');
-    //     }
-    // })
 
     async function submitAnswer(postId) {
     try {
