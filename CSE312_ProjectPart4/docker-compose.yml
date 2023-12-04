@@ -1,0 +1,31 @@
+version: '3'
+services:
+  mongo:
+    image: mongo:4.2.5
+    ports:
+      - '27017:27017'
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      WAIT_HOSTS: mongo:27017
+    ports:
+      - "8080:8080"
+    volumes:
+      - /etc/letsencrypt/live/ubprogrammers.me/fullchain.pem:/etc/letsencrypt/live/ubprogrammers.me/fullchain.pem
+      - /etc/letsencrypt/live/ubprogrammers.me/privkey.pem:/etc/letsencrypt/live/ubprogrammers.me/privkey.pem
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: nginx:latest
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt/live/ubprogrammers.me/fullchain.pem:/etc/letsencrypt/live/ubprogrammers.me/fullchain.pem
+      - /etc/letsencrypt/live/ubprogrammers.me/privkey.pem:/etc/letsencrypt/live/ubprogrammers.me/privkey.pem
+    links:
+      - web
