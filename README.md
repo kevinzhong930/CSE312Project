@@ -1,1 +1,1 @@
-[I'm an inline-style link](https://ubprogrammers.me)
+[https://ubprogrammers.me](https://ubprogrammers.me)
